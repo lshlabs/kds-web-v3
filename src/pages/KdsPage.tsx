@@ -439,17 +439,6 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                       >확인</button>
                     </div>
                   ) : null}
-                  <button
-                    className="kds-store-status-popup-close"
-                    onClick={() => setStoreStatusPopup(false)}
-                    type="button"
-                    aria-label="닫기"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <line x1="1.5" y1="1.5" x2="8.5" y2="8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                      <line x1="8.5" y1="1.5" x2="1.5" y2="8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                  </button>
                 </div>
               ) : null}
             </div>

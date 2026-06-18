@@ -1,46 +1,46 @@
 /* ═══════════════════════════════════════════════
-   Design tokens
+   Design tokens — Light Theme
 ═══════════════════════════════════════════════ */
 :root {
   /* Backgrounds */
-  --color-bg: #0a0b0d;
-  --color-surface: #111318;
-  --color-surface-2: #1a1d24;
-  --color-surface-3: #22262f;
+  --color-bg: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f5f7;
+  --color-surface-3: #e8eaed;
 
   /* Borders */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-hover: rgba(255, 255, 255, 0.15);
+  --color-border: rgba(0, 0, 0, 0.09);
+  --color-border-hover: rgba(0, 0, 0, 0.18);
 
   /* Text */
-  --color-text: #f0f2f5;
+  --color-text: #111318;
   --color-text-muted: #6b7280;
-  --color-text-subtle: #9ca3af;
+  --color-text-subtle: #4b5563;
 
   /* Accent — warm orange */
-  --color-accent: #f97316;
-  --color-accent-hover: #ea6a0a;
+  --color-accent: #e8650a;
+  --color-accent-hover: #d45a06;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: rgba(249, 115, 22, 0.12);
-  --color-accent-border: rgba(249, 115, 22, 0.3);
+  --color-accent-subtle: rgba(232, 101, 10, 0.10);
+  --color-accent-border: rgba(232, 101, 10, 0.28);
 
   /* Status colors */
-  --color-green: #22c55e;
-  --color-green-subtle: rgba(34, 197, 94, 0.1);
-  --color-green-border: rgba(34, 197, 94, 0.3);
+  --color-green: #16a34a;
+  --color-green-subtle: rgba(22, 163, 74, 0.10);
+  --color-green-border: rgba(22, 163, 74, 0.28);
 
-  --color-amber: #f59e0b;
-  --color-amber-subtle: rgba(245, 158, 11, 0.1);
-  --color-amber-border: rgba(245, 158, 11, 0.3);
+  --color-amber: #b45309;
+  --color-amber-subtle: rgba(180, 83, 9, 0.10);
+  --color-amber-border: rgba(180, 83, 9, 0.28);
 
-  --color-red: #ef4444;
-  --color-red-subtle: rgba(239, 68, 68, 0.08);
-  --color-red-border: rgba(239, 68, 68, 0.25);
+  --color-red: #dc2626;
+  --color-red-subtle: rgba(220, 38, 38, 0.08);
+  --color-red-border: rgba(220, 38, 38, 0.22);
 
   /* Hero / auth panel */
-  --color-hero-bg: #060708;
+  --color-hero-bg: #111318;
   --color-hero-text: #f0f2f5;
-  --color-hero-muted: #4b5563;
+  --color-hero-muted: #9ca3af;
 
   /* Error aliases */
   --color-error-bg: var(--color-red-subtle);
@@ -79,7 +79,7 @@ h1, h2, h3, h4, p { margin: 0; }
    Form elements
 ═══════════════════════════════════════════════ */
 input {
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text);
@@ -139,13 +139,13 @@ button:not(:disabled):hover {
 }
 
 .btn-outline {
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-subtle);
 }
 
 .btn-outline:not(:disabled):hover {
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   border-color: var(--color-border-hover);
   color: var(--color-text);
 }
@@ -166,7 +166,7 @@ button:not(:disabled):hover {
 .kds-btn-primary:not(:disabled):hover { background: var(--color-accent-hover); }
 
 .kds-btn-ghost {
-  background: transparent;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-subtle);
@@ -175,7 +175,7 @@ button:not(:disabled):hover {
 }
 
 .kds-btn-ghost:not(:disabled):hover {
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   border-color: var(--color-border-hover);
   color: var(--color-text);
 }
@@ -201,7 +201,8 @@ button:not(:disabled):hover {
 .auth-shell {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .auth-hero {
@@ -276,6 +277,7 @@ button:not(:disabled):hover {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow-y: auto;
   padding: 40px 64px;
 }
 
@@ -726,15 +728,17 @@ button:not(:disabled):hover {
 }
 
 .kds-account-popover {
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   bottom: calc(100% + 6px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   left: 5px;
-  min-width: 210px;
+  min-width: 0;
   padding: 3px;
   position: absolute;
+  white-space: nowrap;
+  width: max-content;
   z-index: 100;
 }
 
@@ -782,7 +786,7 @@ button:not(:disabled):hover {
 }
 
 .kds-account-popover-item:not(:disabled):hover {
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   color: var(--color-text);
 }
 
@@ -951,10 +955,10 @@ button:not(:disabled):hover {
 
 .kds-store-status-popup {
   animation: kds-ctx-in 0.1s ease;
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -991,34 +995,16 @@ button:not(:disabled):hover {
 }
 
 .kds-store-status-popup-btn:not(:disabled):hover {
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   color: var(--color-text);
 }
 
 .kds-store-status-popup-btn.active {
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   color: var(--color-text);
   font-weight: 600;
 }
 
-.kds-store-status-popup-close {
-  align-items: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-  display: flex;
-  height: 22px;
-  justify-content: center;
-  margin-top: 2px;
-  padding: 0;
-  width: 100%;
-}
-
-.kds-store-status-popup-close:not(:disabled):hover {
-  background: var(--color-surface-3);
-  color: var(--color-text);
-}
 
 .kds-pause-duration {
   border-top: 1px solid var(--color-border);
@@ -1149,12 +1135,12 @@ button:not(:disabled):hover {
 .kds-toast {
   align-items: center;
   animation: kds-toast-in 0.18s ease;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  background: var(--color-text);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   bottom: 18px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  color: var(--color-text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  color: var(--color-surface);
   display: flex;
   font-size: 13px;
   font-weight: 500;
@@ -1191,7 +1177,7 @@ button:not(:disabled):hover {
 }
 
 .kds-toast-close:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.15);
   opacity: 1;
 }
 
@@ -1250,7 +1236,7 @@ button:not(:disabled):hover {
 /* Status stripe — left border accent */
 .kds-card.new    { border-left: 3px solid var(--color-red); }
 .kds-card.cooking { border-left: 3px solid var(--color-green); }
-.kds-card.done   { border-left: 3px solid var(--color-border); opacity: 0.75; }
+.kds-card.done   { border-left: 3px solid var(--color-border); opacity: 0.6; }
 .kds-card.warning { border-left-color: var(--color-amber); }
 .kds-card.urgent  { border-left-color: var(--color-red); }
 
@@ -1338,11 +1324,9 @@ button:not(:disabled):hover {
 
 .kds-item:not(.done):hover { background: var(--color-surface-2); }
 
-/* Allergy highlight */
+/* Allergy highlight — background tint only, no duplicate left border */
 .kds-item.allergy {
-  background: rgba(239, 68, 68, 0.04);
-  border-left: 2px solid var(--color-red);
-  padding-left: 10px;
+  background: rgba(220, 38, 38, 0.06);
 }
 
 /* Done state */
@@ -1450,7 +1434,7 @@ button:not(:disabled):hover {
 }
 
 /* Dark theme override */
-.kds-request-label { color: rgba(251, 191, 36, 0.8); }
+.kds-request-label { color: #92400e; }
 .kds-request-label.urgent { color: var(--color-red); }
 
 .kds-request-text {
@@ -1523,10 +1507,10 @@ button:not(:disabled):hover {
 ═══════════════════════════════════════════════ */
 .kds-context-menu {
   animation: kds-ctx-in 0.1s ease;
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   min-width: 140px;
   overflow: hidden;
   padding: 3px;
@@ -1550,12 +1534,14 @@ button:not(:disabled):hover {
   font-weight: 500;
   gap: 7px;
   height: 34px;
-  padding: 0 9px;
+  justify-content: flex-start;
+  padding: 0 10px;
+  text-align: left;
   width: 100%;
 }
 
 .kds-context-menu-item:not(:disabled):hover {
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   color: var(--color-text);
 }
 
@@ -1572,7 +1558,7 @@ button:not(:disabled):hover {
 .kds-modal-backdrop {
   align-items: center;
   animation: kds-fade-in 0.14s ease;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.35);
   bottom: 0;
   display: flex;
   justify-content: center;
@@ -1594,7 +1580,7 @@ button:not(:disabled):hover {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.14);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -1700,14 +1686,10 @@ button:not(:disabled):hover {
 
 .kds-modal-btn.danger:not(:disabled):hover { background: #dc2626; }
 
-/* Detail modal content */
+/* Detail modal content — flat, no nested card wrappers */
 .kds-detail-rows {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .kds-detail-row {
@@ -1716,7 +1698,7 @@ button:not(:disabled):hover {
   display: flex;
   gap: 12px;
   justify-content: space-between;
-  padding: 9px 12px;
+  padding: 8px 0;
 }
 
 .kds-detail-row:last-child { border-bottom: none; }
@@ -1741,19 +1723,15 @@ button:not(:disabled):hover {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.07em;
-  margin-top: 2px;
+  margin-top: 6px;
   text-transform: uppercase;
 }
 
 .kds-detail-sensitive-label { color: var(--color-error-text); }
 
 .kds-detail-items {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .kds-detail-item {
@@ -1761,23 +1739,17 @@ button:not(:disabled):hover {
   border-bottom: 1px solid var(--color-border);
   display: flex;
   gap: 9px;
-  padding: 9px 12px;
+  padding: 8px 0;
 }
 
 .kds-detail-item:last-child { border-bottom: none; }
 
 .kds-detail-item-qty {
-  align-items: center;
-  background: var(--color-surface-3);
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
-  display: flex;
+  color: var(--color-text-muted);
   flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 800;
-  height: 22px;
-  justify-content: center;
-  width: 22px;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 20px;
 }
 
 .kds-detail-item-name {
@@ -1816,13 +1788,10 @@ button:not(:disabled):hover {
 }
 
 .kds-detail-text {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   color: var(--color-text-subtle);
   font-size: 13px;
   line-height: 1.5;
-  padding: 9px 12px;
+  padding: 4px 0 8px;
 }
 
 /* ═══════════════════════════════════════════════
@@ -1847,7 +1816,7 @@ button:not(:disabled):hover {
 
 .kds-panel-feature-gate {
   align-items: flex-start;
-  background: rgba(10, 11, 13, 0.6);
+  background: rgba(244, 245, 247, 0.7);
   display: flex;
   inset: 0;
   justify-content: flex-end;
@@ -1857,10 +1826,10 @@ button:not(:disabled):hover {
 }
 
 .kds-panel-feature-gate-card {
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
   max-width: 340px;
   padding: 12px 14px;
 }
@@ -2099,7 +2068,7 @@ button:not(:disabled):hover {
 
 .kds-menu-row:hover .kds-menu-row-actions { opacity: 1; }
 
-/* ═══════════════════════════════════════════════
+/* ════════════════════════════════════════════��══
    Stats panel — metric strip + menu breakdown
 ═══════════════════════════════════════════════ */
 .kds-metric-strip {
@@ -2275,9 +2244,9 @@ button:not(:disabled):hover {
 }
 
 .kds-toggle-knob {
-  background: var(--color-text-muted);
+  background: #b4b9c2;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   display: block;
   height: 18px;
   left: 2px;
@@ -2317,8 +2286,8 @@ button:not(:disabled):hover {
 }
 
 .kds-segmented-btn.active {
-  background: var(--color-surface-3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10);
   color: var(--color-text);
   font-weight: 600;
 }
