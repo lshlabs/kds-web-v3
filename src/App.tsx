@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { ApiError, apiGetCurrentUser, apiLogout, apiRefresh } from "./lib/api";
 import { clearStoredTokens, loadStoredTokens, saveAccessToken, saveStoredTokens } from "./lib/auth";
+import { createPreviewCurrentUser, createPreviewSession, DEV_PREVIEW_MODE, isDevPreviewAccessToken, PREVIEW_ACCOUNTS } from "./lib/dev-preview";
 import { AuthPage } from "./pages/AuthPage";
 import { KdsPage } from "./pages/KdsPage";
 import type { AuthResponse, AuthSession, CurrentUserResponse, RegisterResponse } from "./types";
@@ -21,6 +22,17 @@ export default function App() {
     if (!tokens.accessToken) {
       setBooting(false);
       return;
+    }
+
+    if (DEV_PREVIEW_MODE && isDevPreviewAccessToken(tokens.accessToken)) {
+      const current = createPreviewCurrentUser(tokens.accessToken);
+      if (current) {
+        setSession(createSession(current, tokens.accessToken, tokens.refreshToken ?? "", tokens.storage === "local"));
+        setRegisteredPending(null);
+        setBootError(null);
+        setBooting(false);
+        return;
+      }
     }
 
     try {
@@ -53,6 +65,18 @@ export default function App() {
     }
 
     try {
+      if (DEV_PREVIEW_MODE && isDevPreviewAccessToken(refreshToken)) {
+        const current = createPreviewCurrentUser(refreshToken.replace("dev-preview-refresh", "dev-preview-access"));
+        if (current) {
+          const accessToken = refreshToken.replace("dev-preview-refresh", "dev-preview-access");
+          const persistent = session?.autoLogin ?? loadStoredTokens().storage === "local";
+          saveAccessToken(accessToken, persistent ? "local" : "session");
+          setSession(createSession(current, accessToken, refreshToken, persistent));
+          setBootError(null);
+          return accessToken;
+        }
+      }
+
       const refreshed = await apiRefresh(refreshToken);
       const persistent = session?.autoLogin ?? loadStoredTokens().storage === "local";
       saveAccessToken(refreshed.accessToken, persistent ? "local" : "session");
@@ -91,7 +115,7 @@ export default function App() {
   async function handleLogout() {
     const refreshToken = session?.refreshToken ?? loadStoredTokens().refreshToken;
     try {
-      if (refreshToken) {
+      if (refreshToken && !(DEV_PREVIEW_MODE && isDevPreviewAccessToken(refreshToken.replace("dev-preview-refresh", "dev-preview-access")))) {
         await apiLogout(refreshToken);
       }
     } catch {
@@ -106,6 +130,14 @@ export default function App() {
   function handleBackFromPending() {
     clearStoredTokens();
     setSession(null);
+    setRegisteredPending(null);
+    setBootError(null);
+  }
+
+  function handlePreviewLogin(accountKey: "owner" | "staff") {
+    const previewSession = createPreviewSession(accountKey);
+    saveStoredTokens(previewSession.accessToken, previewSession.refreshToken, true);
+    setSession(previewSession);
     setRegisteredPending(null);
     setBootError(null);
   }
@@ -137,7 +169,12 @@ export default function App() {
     return (
       <>
         {bootError ? <div className="boot-banner error">{bootError}</div> : null}
-        <AuthPage onLoginSuccess={handleLoginSuccess} onRegisterSuccess={handleRegisterSuccess} />
+        <AuthPage
+          onLoginSuccess={handleLoginSuccess}
+          onRegisterSuccess={handleRegisterSuccess}
+          previewAccounts={DEV_PREVIEW_MODE ? PREVIEW_ACCOUNTS : []}
+          onPreviewLogin={DEV_PREVIEW_MODE ? handlePreviewLogin : undefined}
+        />
       </>
     );
   }

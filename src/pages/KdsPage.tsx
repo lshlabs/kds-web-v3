@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError, apiGetKdsOrders, apiUpdateOrderStatus } from "../lib/api";
+import { isDevPreviewAccessToken, loadPreviewOrders, updatePreviewOrderStatus } from "../lib/dev-preview";
 import type { AnalysisAction, AuthSession, Order, OrderAIAnalysis, OrderStatus } from "../types";
 
 const POLLING_INTERVAL_MS = 3000;
@@ -46,10 +47,11 @@ type KdsPageProps = {
 };
 
 export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
+  const isDevPreview = isDevPreviewAccessToken(session.accessToken);
   const localOnlyFeatureMessage = "이 기능은 아직 백엔드 연동 전입니다.";
   const localOnlyPanelDescription = "현재 패널은 UI/UX 검증용으로만 노출되며, 실제 저장/변경 기능은 아직 연결되지 않았습니다.";
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>(() => (isDevPreview ? loadPreviewOrders() : []));
+  const [loading, setLoading] = useState(!isDevPreview);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "error" | "info" } | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
@@ -107,6 +109,12 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
   }
 
   const fetchOrders = useCallback(async () => {
+    if (isDevPreview) {
+      setOrders(loadPreviewOrders());
+      setLoading(false);
+      return;
+    }
+
     try {
       const data = await requestWithReauth(session.accessToken, onUnauthorized, apiGetKdsOrders);
 
@@ -120,7 +128,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [onUnauthorized, session.accessToken]);
+  }, [isDevPreview, onUnauthorized, session.accessToken]);
 
   useEffect(() => {
     void fetchOrders();
@@ -204,6 +212,12 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
   async function updateOrderStatus(orderId: number, status: OrderStatus) {
     setUpdatingOrderId(orderId);
     try {
+      if (isDevPreview) {
+        const nextOrders = updatePreviewOrderStatus(loadPreviewOrders(), orderId, status);
+        setOrders(nextOrders);
+        return;
+      }
+
       await requestWithReauth(session.accessToken, onUnauthorized, (accessToken) =>
         apiUpdateOrderStatus(accessToken, orderId, status),
       );

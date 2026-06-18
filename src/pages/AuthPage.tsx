@@ -10,11 +10,19 @@ import type {
   RegisterResponse,
 } from "../types";
 
+type PreviewAuthAccount = {
+  key: "owner" | "staff";
+  label: string;
+  description: string;
+};
+
 type AuthPageProps = {
   onLoginSuccess: (response: AuthResponse) => void;
   onRegisterSuccess: (response: RegisterResponse) => void;
   pendingInfo?: { user: AuthUser; store: AuthStore } | null;
   onBackFromPending?: () => void;
+  previewAccounts?: PreviewAuthAccount[];
+  onPreviewLogin?: (accountKey: "owner" | "staff") => void;
 };
 
 const REMEMBERED_EMAIL_KEY = "deeporder.kds.rememberedEmail";
@@ -43,6 +51,8 @@ export function AuthPage({
   onRegisterSuccess,
   pendingInfo,
   onBackFromPending,
+  previewAccounts = [],
+  onPreviewLogin,
 }: AuthPageProps) {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [loginForm, setLoginForm] = useState(defaultLoginForm);
@@ -261,11 +271,36 @@ export function AuthPage({
               </button>
             </div>
 
-            {errorMessage ? (
+              {errorMessage ? (
               <div className="banner error" role="alert">
                 {errorMessage}
               </div>
             ) : null}
+
+              {previewAccounts.length > 0 && onPreviewLogin ? (
+                <div className="banner" role="status">
+                  <strong>개발용 프리뷰 모드</strong>
+                  <div style={{ display: "grid", gap: "8px", marginTop: "8px" }}>
+                    {previewAccounts.map((account) => (
+                      <button
+                        key={account.key}
+                        className="btn-outline"
+                        onClick={() => onPreviewLogin(account.key)}
+                        type="button"
+                      >
+                        {account.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gap: "4px", marginTop: "8px" }}>
+                    {previewAccounts.map((account) => (
+                      <span key={`${account.key}-desc`} style={{ fontSize: "12px" }}>
+                        {account.label}: {account.description}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="auth-tab-panels">
                 <div
