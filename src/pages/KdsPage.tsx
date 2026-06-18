@@ -20,7 +20,7 @@ type StaffMember = {
 };
 
 type AssignedMenu = {
-  id: string; // client-side uuid
+  id: string;
   name: string;
 };
 
@@ -60,33 +60,25 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
   const [activeTab, setActiveTab] = useState<BoardTab>("RECEIVED");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  // Store status (local state — no backend)
   const [storeStatus, setStoreStatus] = useState<StoreStatus>("OPEN");
   const [storeStatusPopup, setStoreStatusPopup] = useState(false);
   const [pauseMinutes, setPauseMinutes] = useState(10);
-  // Assigned menus for "내 업무" tab (local state — no backend)
   const [assignedMenus, setAssignedMenus] = useState<AssignedMenu[]>([
     { id: "demo-1", name: "짜장면" },
     { id: "demo-2", name: "짬뽕" },
   ]);
-  // completedItemIds lifted to page level so MyTasksPanel can react to KDS completions
   const [completedItemIds, setCompletedItemIds] = useState<Set<number>>(new Set());
-  // Front-only hidden order ids (제거 처리)
   const [hiddenOrderIds, setHiddenOrderIds] = useState<Set<number>>(new Set());
-  // Context menu
   const [contextMenu, setContextMenu] = useState<{ orderId: number; x: number; y: number } | null>(null);
-  // Modals
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
   const [removeOrderId, setRemoveOrderId] = useState<number | null>(null);
   const [clearDoneConfirm, setClearDoneConfirm] = useState(false);
-  // Settings (local state only — no backend yet)
   const [settings, setSettings] = useState<SettingsState>({
     notificationsEnabled: true,
     sound: "bell",
     breaktime: { enabled: false, startHour: 15, startMinute: 0, durationMinutes: 60 },
     autoAccept: false,
   });
-  // Change-password modal
   const [pwModal, setPwModal] = useState(false);
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
@@ -117,7 +109,6 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
 
     try {
       const data = await requestWithReauth(session.accessToken, onUnauthorized, apiGetKdsOrders);
-
       setOrders(data.orders);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -149,12 +140,10 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
       if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
         setAccountOpen(false);
       }
-      // Close context menu on any click outside
       const target = event.target as Element;
       if (!target.closest(".kds-context-menu")) {
         setContextMenu(null);
       }
-      // Close store status popup on any click outside
       if (!target.closest(".kds-store-status") && !target.closest(".kds-store-status-popup")) {
         setStoreStatusPopup(false);
       }
@@ -177,7 +166,6 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
   async function handleManualRefresh() {
     setRefreshing(true);
     await fetchOrders();
-    // Keep spin visible for at least 600ms so the animation is perceptible
     window.setTimeout(() => setRefreshing(false), 600);
   }
 
@@ -185,7 +173,6 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
     () =>
       orders
         .filter((order) => (order.status === "NEW" || order.status === "COOKING") && !hiddenOrderIds.has(order.id))
-        // Unaccepted (NEW) first, then Accepted (COOKING); within each group sort by order time ascending
         .sort((left, right) => {
           const sw = statusWeight(left.status) - statusWeight(right.status);
           if (sw !== 0) return sw;
@@ -200,7 +187,6 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
     () =>
       orders
         .filter((order) => order.status === "DONE" && !hiddenOrderIds.has(order.id))
-        // Most recently completed first
         .sort((left, right) => {
           const lt = parseApiTimestamp(left.updated_at).getTime();
           const rt = parseApiTimestamp(right.updated_at).getTime();
@@ -260,64 +246,25 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
 
   return (
     <div className="kds-shell">
+      {/* ── Sidebar ── */}
       <nav className={`kds-sidebar${sidebarOpen ? " open" : ""}`} aria-label="메인 내비게이션">
         <button
           aria-label={sidebarOpen ? "메뉴 닫기" : "메뉴 열기"}
           className="kds-sidebar-toggle"
-          onClick={() => setSidebarOpen((value) => !value)}
+          onClick={() => setSidebarOpen((v) => !v)}
           type="button"
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             {sidebarOpen ? (
               <>
-                <line
-                  x1="3"
-                  y1="3"
-                  x2="15"
-                  y2="15"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1="15"
-                  y1="3"
-                  x2="3"
-                  y2="15"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
+                <line x1="3" y1="3" x2="13" y2="13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="13" y1="3" x2="3" y2="13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </>
             ) : (
               <>
-                <line
-                  x1="3"
-                  y1="5"
-                  x2="15"
-                  y2="5"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1="3"
-                  y1="9"
-                  x2="15"
-                  y2="9"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1="3"
-                  y1="13"
-                  x2="15"
-                  y2="13"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
+                <line x1="2" y1="4.5" x2="14" y2="4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="2" y1="11.5" x2="14" y2="11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </>
             )}
           </svg>
@@ -325,21 +272,17 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         </button>
 
         <div className="kds-sidebar-nav">
-          {/* Work — navigates to RECEIVED (the default work view) */}
           <button
             className={`kds-sidebar-item${(activeTab === "RECEIVED" || activeTab === "DONE" || activeTab === "MY_TASKS") ? " active" : ""}`}
-            onClick={() => {
-              setActiveTab("RECEIVED");
-              setSidebarOpen(false);
-            }}
+            onClick={() => { setActiveTab("RECEIVED"); setSidebarOpen(false); }}
             type="button"
             title="업무"
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <rect x="3" y="2" width="12" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
-              <line x1="6" y1="6" x2="12" y2="6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="6" y1="9" x2="12" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="2" y="1.5" width="12" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="5" y1="5.5" x2="11" y2="5.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <line x1="5" y1="10.5" x2="9" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
             {sidebarOpen && (
               <span>
@@ -361,11 +304,11 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
               type="button"
               title="직원"
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <circle cx="6.5" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M1 15c0-3.04 2.46-5.5 5.5-5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <circle cx="13" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M17 15c0-3.04-2.46-5.5-5.5-5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="6" cy="5" r="2.3" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M1 14c0-2.76 2.24-5 5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <circle cx="12" cy="5" r="2.3" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M15 14c0-2.76-2.24-5-5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
               {sidebarOpen && <span>직원</span>}
             </button>
@@ -378,10 +321,10 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
               type="button"
               title="통계"
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <rect x="3" y="10" width="3" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-                <rect x="7.5" y="6" width="3" height="9" rx="1" stroke="currentColor" strokeWidth="1.5" />
-                <rect x="12" y="3" width="3" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" />
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <rect x="2" y="9" width="3" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+                <rect x="6.5" y="5.5" width="3" height="8.5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+                <rect x="11" y="2" width="3" height="12" rx="1" stroke="currentColor" strokeWidth="1.4" />
               </svg>
               {sidebarOpen && <span>통계</span>}
             </button>
@@ -393,9 +336,9 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
             type="button"
             title="설정"
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <circle cx="9" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M9 2v1.5M9 14.5V16M2 9h1.5M14.5 9H16M3.93 3.93l1.06 1.06M13.01 13.01l1.06 1.06M3.93 14.07l1.06-1.06M13.01 4.99l1.06-1.06" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
             {sidebarOpen && <span>설정</span>}
           </button>
@@ -418,21 +361,10 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                 onClick={handleLogout}
                 type="button"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path
-                    d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M11 11l3-3-3-3"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <line x1="14" y1="8" x2="6" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M5 1.5H2.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  <path d="M10 10l3-3-3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="13" y1="7" x2="5.5" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 {loggingOut ? "로그아웃 중…" : "로그아웃"}
               </button>
@@ -441,7 +373,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
 
           <button
             className={`kds-account-trigger${accountOpen ? " active" : ""}`}
-            onClick={() => setAccountOpen((value) => !value)}
+            onClick={() => setAccountOpen((v) => !v)}
             type="button"
             title={session.store.storeName}
             aria-expanded={accountOpen}
@@ -452,76 +384,67 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         </div>
       </nav>
 
+      {/* ── Main ── */}
       <div className="kds-main">
         <header className="kds-topbar">
+          {/* Left: store status */}
           <div className="kds-topbar-left">
-            {/* Store status indicator */}
-            <button
-              className={`kds-store-status kds-store-status--${storeStatus.toLowerCase()}`}
-              onClick={() => showLocalOnlyNotice("매장 상태 변경")}
-              type="button"
-              aria-label="매장 상태 변경"
-            >
-              <span className="kds-store-status-dot" aria-hidden="true" />
-              {storeStatus === "OPEN" ? "영업중" : storeStatus === "PAUSED" ? "일시중지" : "영업종료"}
-            </button>
+            <div style={{ position: "relative" }}>
+              <button
+                className={`kds-store-status kds-store-status--${storeStatus.toLowerCase()}`}
+                onClick={() => setStoreStatusPopup((v) => !v)}
+                type="button"
+                aria-label="매장 상태 변경"
+              >
+                <span className="kds-store-status-dot" aria-hidden="true" />
+                {storeStatus === "OPEN" ? "영업중" : storeStatus === "PAUSED" ? "일시중지" : "영업종료"}
+              </button>
 
-            {/* Store status popup */}
-            {storeStatusPopup ? (
-              <div className="kds-store-status-popup" role="dialog" aria-modal="true" aria-label="매장 상태 변경">
-                <p className="kds-store-status-popup-title">매장 상태</p>
-                {(["OPEN", "PAUSED", "CLOSED"] as StoreStatus[]).map((s) => (
-                  <button
-                    key={s}
-                    className={`kds-store-status-popup-btn${storeStatus === s ? " active" : ""}`}
-                    onClick={() => { setStoreStatus(s); if (s !== "PAUSED") setStoreStatusPopup(false); }}
-                    type="button"
-                  >
-                    <span className={`kds-store-status-dot kds-store-status-dot--${s.toLowerCase()}`} aria-hidden="true" />
-                    {s === "OPEN" ? "영업중" : s === "PAUSED" ? "일시중지" : "영업종료"}
-                  </button>
-                ))}
-                {storeStatus === "PAUSED" ? (
-                  <div className="kds-pause-duration">
-                    <span className="kds-pause-duration-label">일시중지 시간</span>
-                    <div className="kds-pause-duration-control">
-                      <button
-                        className="kds-pause-stepper"
-                        onClick={() => setPauseMinutes((m) => Math.max(10, m - 10))}
-                        type="button"
-                        aria-label="10분 감소"
-                      >−</button>
-                      <span className="kds-pause-duration-value">{pauseMinutes}분</span>
-                      <button
-                        className="kds-pause-stepper"
-                        onClick={() => setPauseMinutes((m) => m + 10)}
-                        type="button"
-                        aria-label="10분 증가"
-                      >+</button>
-                    </div>
+              {storeStatusPopup ? (
+                <div className="kds-store-status-popup" role="dialog" aria-modal="true" aria-label="매장 상태 변경">
+                  <p className="kds-store-status-popup-title">매장 상태</p>
+                  {(["OPEN", "PAUSED", "CLOSED"] as StoreStatus[]).map((s) => (
                     <button
-                      className="kds-pause-confirm"
-                      onClick={() => setStoreStatusPopup(false)}
+                      key={s}
+                      className={`kds-store-status-popup-btn${storeStatus === s ? " active" : ""}`}
+                      onClick={() => { setStoreStatus(s); if (s !== "PAUSED") setStoreStatusPopup(false); }}
                       type="button"
-                    >확인</button>
-                  </div>
-                ) : null}
-                <button
-                  className="kds-store-status-popup-close"
-                  onClick={() => setStoreStatusPopup(false)}
-                  type="button"
-                  aria-label="닫기"
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
-            ) : null}
+                    >
+                      <span className={`kds-store-status-dot kds-store-status-dot--${s.toLowerCase()}`} aria-hidden="true" />
+                      {s === "OPEN" ? "영업중" : s === "PAUSED" ? "일시중지" : "영업종료"}
+                    </button>
+                  ))}
+                  {storeStatus === "PAUSED" ? (
+                    <div className="kds-pause-duration">
+                      <span className="kds-pause-duration-label">일시중지 시간</span>
+                      <div className="kds-pause-duration-control">
+                        <button
+                          className="kds-pause-stepper"
+                          onClick={() => setPauseMinutes((m) => Math.max(10, m - 10))}
+                          type="button"
+                          aria-label="10분 감소"
+                        >−</button>
+                        <span className="kds-pause-duration-value">{pauseMinutes}분</span>
+                        <button
+                          className="kds-pause-stepper"
+                          onClick={() => setPauseMinutes((m) => m + 10)}
+                          type="button"
+                          aria-label="10분 증가"
+                        >+</button>
+                      </div>
+                      <button
+                        className="kds-pause-confirm"
+                        onClick={() => setStoreStatusPopup(false)}
+                        type="button"
+                      >확인</button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {/* Top tabs — only shown on the Work page */}
+          {/* Center: tabs or page title */}
           {(activeTab === "RECEIVED" || activeTab === "DONE" || activeTab === "MY_TASKS") ? (
             <div className="kds-topbar-tabs" role="tablist">
               <button
@@ -532,7 +455,9 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                 type="button"
               >
                 접수
-                <span className="kds-tab-count">{receivedOrders.length}</span>
+                {receivedOrders.length > 0 && (
+                  <span className="kds-tab-count">{receivedOrders.length}</span>
+                )}
               </button>
               <button
                 aria-selected={activeTab === "DONE"}
@@ -542,7 +467,9 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                 type="button"
               >
                 완료
-                <span className="kds-tab-count">{doneOrders.length}</span>
+                {doneOrders.length > 0 && (
+                  <span className="kds-tab-count">{doneOrders.length}</span>
+                )}
               </button>
               <button
                 aria-selected={activeTab === "MY_TASKS"}
@@ -560,34 +487,35 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
             </div>
           )}
 
+          {/* Right: actions */}
           <div className="kds-topbar-right">
             {activeTab === "DONE" && doneOrders.length > 0 ? (
               <button
                 aria-label="완료 주문 내역 정리"
-                className="kds-refresh-btn"
+                className="kds-icon-btn"
                 onClick={() => showLocalOnlyNotice("완료 주문 정리")}
+                title="완료 주문 정리"
                 type="button"
               >
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <path d="M7 8v6M10 8v6M13 8v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M3 5h14M8 5V3h4v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M5 5l1 12h8l1-12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="15" height="15" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M6 7v5M9 7v5M12 7v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M2.5 4.5h13M7 4.5V3h4v1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M4.5 4.5l1 10h7l1-10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             ) : null}
             <button
               aria-label="주문 새로고침"
-              className={`kds-refresh-btn${loading || refreshing ? " spinning" : ""}`}
+              className={`kds-icon-btn${loading || refreshing ? " spinning" : ""}`}
               disabled={loading || refreshing}
               onClick={() => void handleManualRefresh()}
               type="button"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path
-                  d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5"
-                  fill="none"
+                  d="M3 10a7 7 0 1 0 7-7 7.5 7.5 0 0 0-5.2 2.1L3 7M3 3v4h4"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="1.8"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
@@ -597,7 +525,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         </header>
 
         {counts.CANCELLED > 0 ? (
-          <div className="banner">취소 주문 {counts.CANCELLED}건은 보드에서 제외하고 집계로만 관리합니다.</div>
+          <div className="kds-notice-bar">취소 주문 {counts.CANCELLED}건은 보드에서 제외되어 집계로만 관리됩니다.</div>
         ) : null}
 
         {activeTab === "MY_TASKS" ? (
@@ -630,7 +558,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
           <section className="kds-board" aria-label="주문 보드">
             {activeOrders.length === 0 ? (
               <div className="kds-empty">
-                {activeTab === "RECEIVED" ? "접수된 주문이 없습니다" : "완료된 주문이 없습니다"}
+                {loading ? "주문을 불러오는 중…" : activeTab === "RECEIVED" ? "접수된 주문이 없습니다" : "완료된 주문이 없습니다"}
               </div>
             ) : (
               <div className="kds-lane">
@@ -652,7 +580,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         )}
       </div>
 
-      {/* Context menu */}
+      {/* ── Context menu ── */}
       {contextMenu ? (
         <div
           className="kds-context-menu"
@@ -661,40 +589,34 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         >
           <button
             className="kds-context-menu-item"
-            onClick={() => {
-              setDetailOrderId(contextMenu.orderId);
-              setContextMenu(null);
-            }}
+            onClick={() => { setDetailOrderId(contextMenu.orderId); setContextMenu(null); }}
             role="menuitem"
             type="button"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
-              <line x1="8" y1="7" x2="8" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="8" cy="5" r="0.8" fill="currentColor" />
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
+              <line x1="7" y1="6" x2="7" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <circle cx="7" cy="4.3" r="0.75" fill="currentColor" />
             </svg>
             상세정보
           </button>
           <button
             className="kds-context-menu-item danger"
-            onClick={() => {
-              showLocalOnlyNotice("주문 제거");
-              setContextMenu(null);
-            }}
+            onClick={() => { showLocalOnlyNotice("주문 제거"); setContextMenu(null); }}
             role="menuitem"
             type="button"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M5.5 6.5v5M8 6.5v5M10.5 6.5v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <path d="M2.5 4h11M6 4V2.5h4V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M4 4l.8 9.5h6.4L12 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M4.5 5.5v5M7 5.5v5M9.5 5.5v5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M2 3.5h10M5 3.5V2h4v1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M3.5 3.5l.75 9h5.5l.75-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             제거
           </button>
         </div>
       ) : null}
 
-      {/* Detail modal */}
+      {/* ── Detail modal ── */}
       {detailOrderId !== null ? (() => {
         const order = orders.find((o) => o.id === detailOrderId);
         if (!order) return null;
@@ -703,17 +625,16 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
           <div className="kds-modal-backdrop" onClick={() => setDetailOrderId(null)}>
             <div className="kds-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="주문 상세정보">
               <div className="kds-modal-head">
-                <h2 className="kds-modal-title">주문 상세정보</h2>
+                <h2 className="kds-modal-title">주문 #{order.order_number ?? order.id}</h2>
                 <button className="kds-modal-close" onClick={() => setDetailOrderId(null)} type="button" aria-label="닫기">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                    <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                    <line x1="12" y1="2" x2="2" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <line x1="1.5" y1="1.5" x2="11.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1="11.5" y1="1.5" x2="1.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>
               <div className="kds-modal-body">
                 <div className="kds-detail-rows">
-                  <div className="kds-detail-row"><span>주문번호</span><strong>#{order.order_number ?? order.id}</strong></div>
                   <div className="kds-detail-row"><span>주문 시간</span><strong>{order.ordered_at ? formatDetailTime(order.ordered_at) : formatDetailTime(order.created_at)}</strong></div>
                   <div className="kds-detail-row"><span>플랫폼</span><strong>{getOrderTypeLabel(order.platform)} ({order.platform})</strong></div>
                   {totalAmount > 0 ? (
@@ -769,7 +690,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         );
       })() : null}
 
-      {/* Remove confirm modal */}
+      {/* ── Remove confirm modal ── */}
       {removeOrderId !== null ? (
         <div className="kds-modal-backdrop" onClick={() => setRemoveOrderId(null)}>
           <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -780,29 +701,18 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
               <p className="kds-modal-desc">주문을 제거하시겠습니까?</p>
             </div>
             <div className="kds-modal-foot">
-              <button
-                className="kds-modal-btn secondary"
-                onClick={() => setRemoveOrderId(null)}
-                type="button"
-              >
-                아니오
-              </button>
+              <button className="kds-modal-btn secondary" onClick={() => setRemoveOrderId(null)} type="button">아니오</button>
               <button
                 className="kds-modal-btn danger"
-                onClick={() => {
-                  setHiddenOrderIds((prev) => new Set(prev).add(removeOrderId));
-                  setRemoveOrderId(null);
-                }}
+                onClick={() => { setHiddenOrderIds((prev) => new Set(prev).add(removeOrderId)); setRemoveOrderId(null); }}
                 type="button"
-              >
-                예
-              </button>
+              >예</button>
             </div>
           </div>
         </div>
       ) : null}
 
-      {/* Clear done confirm modal */}
+      {/* ── Clear done confirm modal ── */}
       {clearDoneConfirm ? (
         <div className="kds-modal-backdrop" onClick={() => setClearDoneConfirm(false)}>
           <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -813,13 +723,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
               <p className="kds-modal-desc">주문완료 내역을 삭제할까요?</p>
             </div>
             <div className="kds-modal-foot">
-              <button
-                className="kds-modal-btn secondary"
-                onClick={() => setClearDoneConfirm(false)}
-                type="button"
-              >
-                아니오
-              </button>
+              <button className="kds-modal-btn secondary" onClick={() => setClearDoneConfirm(false)} type="button">아니오</button>
               <button
                 className="kds-modal-btn danger"
                 onClick={() => {
@@ -832,24 +736,22 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                   setClearDoneConfirm(false);
                 }}
                 type="button"
-              >
-                예
-              </button>
+              >예</button>
             </div>
           </div>
         </div>
       ) : null}
 
-      {/* Change password modal */}
+      {/* ── Change password modal ── */}
       {pwModal ? (
         <div className="kds-modal-backdrop" onClick={() => setPwModal(false)}>
           <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="비밀번호 변경">
             <div className="kds-modal-head">
               <h2 className="kds-modal-title">비밀번호 변경</h2>
               <button className="kds-modal-close" onClick={() => setPwModal(false)} type="button" aria-label="닫기">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <line x1="12" y1="2" x2="2" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                  <line x1="1.5" y1="1.5" x2="11.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="11.5" y1="1.5" x2="1.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
@@ -879,6 +781,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         </div>
       ) : null}
 
+      {/* ── Toast ── */}
       {toast ? (
         <div
           className={`kds-toast${toast.type === "error" ? " error" : ""}`}
@@ -886,17 +789,23 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
           aria-live="assertive"
         >
           {toast.type === "error" ? (
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.4" />
-              <line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <circle cx="7" cy="9.5" r="0.7" fill="currentColor" />
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" strokeWidth="1.3" />
+              <line x1="6.5" y1="3.5" x2="6.5" y2="7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <circle cx="6.5" cy="9" r="0.65" fill="currentColor" />
             </svg>
-          ) : null}
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" strokeWidth="1.3" />
+              <line x1="6.5" y1="3.5" x2="6.5" y2="7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <circle cx="6.5" cy="9" r="0.65" fill="currentColor" />
+            </svg>
+          )}
           <span>{toast.message}</span>
           <button className="kds-toast-close" onClick={() => setToast(null)} type="button" aria-label="닫기">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+              <line x1="1.5" y1="1.5" x2="9.5" y2="9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <line x1="9.5" y1="1.5" x2="1.5" y2="9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
           </button>
         </div>
@@ -905,6 +814,9 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
   );
 }
 
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
 async function requestWithReauth<T>(
   accessToken: string,
   onUnauthorized: () => Promise<string | null>,
@@ -916,7 +828,6 @@ async function requestWithReauth<T>(
     if (!(error instanceof ApiError) || error.status !== 401) {
       throw error;
     }
-
     const nextAccessToken = await onUnauthorized();
     if (!nextAccessToken) {
       throw error;
@@ -925,9 +836,9 @@ async function requestWithReauth<T>(
   }
 }
 
-// Threshold: cards with >3 items use 2-column item layout
-const ITEMS_2COL_THRESHOLD = 4;
-
+// ─────────────────────────────────────────────
+// Order Card
+// ─────────────────────────────────────────────
 function OrderCard({
   completedItemIds,
   now,
@@ -953,10 +864,9 @@ function OrderCard({
   const isUrgent = elapsedMinutes >= 15;
   const isWarning = elapsedMinutes >= 8 && elapsedMinutes < 15;
   const orderTypeLabel = getOrderTypeLabel(order.platform);
-  const use2Col = order.items.length >= ITEMS_2COL_THRESHOLD;
 
   function handlePointerDown(e: React.PointerEvent<HTMLElement>) {
-    if (e.button !== 0) return; // only primary button for long press
+    if (e.button !== 0) return;
     longPressTimerRef.current = window.setTimeout(() => {
       onContextMenu(order.id, e.clientX, e.clientY);
     }, 600);
@@ -974,60 +884,90 @@ function OrderCard({
     onContextMenu(order.id, e.clientX, e.clientY);
   }
 
+  const statusClass = order.status.toLowerCase();
+  const urgencyClass = isUrgent ? " urgent" : isWarning ? " warning" : "";
+
   return (
     <article
-      className={`kds-card ${order.status.toLowerCase()}${isUrgent ? " urgent" : isWarning ? " warning" : ""}`}
+      className={`kds-card ${statusClass}${urgencyClass}`}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
       onContextMenu={handleContextMenu}
     >
+      {/* Card header */}
       <div className="kds-card-head">
         <div className="kds-card-head-left">
           <span className="kds-order-num">#{order.order_number ?? order.id}</span>
           <span className={`kds-elapsed-badge${isUrgent ? " urgent" : isWarning ? " warning" : ""}`}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M6 3.5V6L7.5 7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+              <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.1" />
+              <path d="M5.5 3V5.5L7 7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
             </svg>
-            {elapsed} 경과
+            {elapsed}
           </span>
         </div>
-        <span className="kds-order-type">{orderTypeLabel}</span>
+        <span className={`kds-order-type-badge kds-order-type-badge--${order.platform?.toLowerCase().includes("delivery") || order.platform?.toLowerCase().includes("배달") ? "delivery" : order.platform?.toLowerCase().includes("takeout") || order.platform?.toLowerCase().includes("포장") ? "takeout" : "dine"}`}>
+          {orderTypeLabel}
+        </span>
       </div>
 
-      <div className={`kds-items${use2Col ? " kds-items--2col" : ""}`}>
+      {/* Items — continuous flat list */}
+      <div className="kds-items">
         {order.items.map((item, idx) => {
           const isDone = completedItemIds.has(item.id);
           const isLast = idx === order.items.length - 1;
+          const hasAllergy = allergyRiskItemIds.has(item.id);
           return (
             <div
-              className={`kds-item${allergyRiskItemIds.has(item.id) ? " allergy-risk" : ""}${isDone ? " item-done" : ""}${isLast ? " kds-item--last" : ""}`}
               key={item.id}
+              className={`kds-item${hasAllergy ? " allergy" : ""}${isDone ? " done" : ""}${isLast ? " last" : ""}`}
               onClick={() => onToggleItemDone(item.id)}
               role="button"
               tabIndex={0}
               aria-pressed={isDone}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleItemDone(item.id); }}
             >
-              <span className={`kds-item-qty${isDone ? " done" : ""}`}>{item.quantity}</span>
-              <div className="kds-item-body">
-                <span className={`kds-item-name${isDone ? " done" : ""}`}>{item.name}</span>
+              {/* Quantity */}
+              <span className="kds-item-qty">{item.quantity}</span>
+
+              {/* Name + options */}
+              <div className="kds-item-content">
+                <span className="kds-item-name">{item.name}</span>
                 {item.options.length > 0 ? (
-                  <ul className="kds-item-options" aria-label="옵션">
-                    {item.options.map((option, index) => (
-                      <li key={`${item.id}-${index}`}>{option}</li>
+                  <ul className="kds-item-opts" aria-label="옵션">
+                    {item.options.map((opt, i) => (
+                      <li key={`${item.id}-${i}`}>{opt}</li>
                     ))}
                   </ul>
                 ) : null}
               </div>
+
+              {/* Allergy / done indicator */}
+              {hasAllergy && !isDone ? (
+                <span className="kds-item-flag allergy" aria-label="알레르기 주의" title="알레르기 주의">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M6 1.5L11 10H1L6 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                    <line x1="6" y1="5" x2="6" y2="7.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                    <circle cx="6" cy="8.8" r="0.5" fill="currentColor" />
+                  </svg>
+                </span>
+              ) : isDone ? (
+                <span className="kds-item-flag done" aria-label="완료">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M2.5 6.5l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              ) : null}
             </div>
           );
         })}
       </div>
 
+      {/* Request / AI panel */}
       <RequestPanel analysis={order.aiAnalysis} customerRequest={order.customer_request} />
 
+      {/* Action button */}
       {order.status === "NEW" ? (
         <button
           className="kds-action-btn"
@@ -1037,8 +977,7 @@ function OrderCard({
         >
           {updating ? "변경중…" : "조리 시작"}
         </button>
-      ) : null}
-      {order.status === "COOKING" ? (
+      ) : order.status === "COOKING" ? (
         <button
           className="kds-action-btn complete"
           disabled={updating}
@@ -1052,6 +991,9 @@ function OrderCard({
   );
 }
 
+// ─────────────────────────────────────────────
+// Panel Feature Gate
+// ─────────────────────────────────────────────
 function PanelFeatureGate({ title, description }: { title: string; description: string }) {
   return (
     <div className="kds-panel-feature-gate" aria-hidden="true">
@@ -1063,6 +1005,9 @@ function PanelFeatureGate({ title, description }: { title: string; description: 
   );
 }
 
+// ─────────────────────────────────────────────
+// Request Panel
+// ─────────────────────────────────────────────
 function RequestPanel({
   analysis,
   customerRequest,
@@ -1071,9 +1016,7 @@ function RequestPanel({
   customerRequest: string | null;
 }) {
   const rawText = customerRequest?.trim() ?? "";
-  if (!analysis && !rawText) {
-    return null;
-  }
+  if (!analysis && !rawText) return null;
 
   if (!analysis) {
     return (
@@ -1087,9 +1030,7 @@ function RequestPanel({
   const actions = analysis.kitchenActions ?? [];
   const hasActions = actions.length > 0;
   const hasRaw = rawText.length > 0;
-  if (!hasActions && !hasRaw) {
-    return null;
-  }
+  if (!hasActions && !hasRaw) return null;
 
   return (
     <div className={`kds-request-panel${analysis.needsHumanCheck ? " needs-check" : ""}`}>
@@ -1188,114 +1129,98 @@ function StaffPanel() {
 
   return (
     <section className="kds-panel" aria-label="직원 관리">
-      <div className="kds-my-tasks-head">
-        <div className="kds-panel-head">
+      {/* Header */}
+      <div className="kds-panel-header">
+        <div>
           <h2 className="kds-panel-title">직원 관리</h2>
           <p className="kds-panel-subtitle">총 {staffList.length}명 · 활성 {activeCount}명</p>
         </div>
-        <button className="kds-add-menu-btn" onClick={openAdd} type="button">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-            <line x1="6.5" y1="1" x2="6.5" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <button className="kds-btn-primary kds-btn-sm" onClick={openAdd} type="button">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           </svg>
           직원 추가
         </button>
       </div>
 
-      {/* Staff list */}
-      <div className="kds-staff-list">
-        {staffList.map((member) => (
-          <div className={`kds-staff-row${!member.active ? " inactive" : ""}`} key={member.id}>
-            <div className="kds-staff-avatar" aria-hidden="true">
-              {member.name.slice(0, 1)}
-            </div>
-            <div className="kds-staff-info">
-              <div className="kds-staff-name">
-                {member.name}
-                <span className={`kds-staff-role-badge${member.role === "manager" ? " manager" : ""}`}>
-                  {member.role === "manager" ? "매니저" : "직원"}
-                </span>
-                {!member.active ? <span className="kds-staff-inactive-badge">비활성</span> : null}
-              </div>
-              <div className="kds-staff-email">{member.email}</div>
-            </div>
-            <div className="kds-staff-pin-area">
-              {pinVisible === member.id ? (
-                <div className="kds-staff-pin-reveal">
-                  <span className="kds-staff-pin-label">PIN</span>
-                  <span className="kds-staff-pin-value">{member.pin}</span>
-                  <button
-                    className="kds-staff-pin-hide"
-                    onClick={() => setPinVisible(null)}
-                    type="button"
-                    aria-label="PIN 숨기기"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                      <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      <line x1="12" y1="2" x2="2" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <div className="kds-staff-actions">
-              <button
-                className="kds-staff-action-btn"
-                onClick={() => setModal({ type: "pin", member })}
-                title="PIN 발급"
-                type="button"
-              >
-                PIN
-              </button>
-              <button
-                className="kds-staff-action-btn"
-                onClick={() => openEdit(member)}
-                title="수정"
-                type="button"
-              >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                  <path d="M2 10l7-7 2 2-7 7H2v-2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <button
-                className={`kds-staff-action-btn${member.active ? " danger" : " restore"}`}
-                onClick={() => setModal({ type: "deactivate", member })}
-                title={member.active ? "비활성화" : "활성화"}
-                type="button"
-              >
-                {member.active ? (
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                    <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" strokeWidth="1.3" />
-                    <line x1="4" y1="6.5" x2="9" y2="6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                ) : (
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                    <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" strokeWidth="1.3" />
-                    <path d="M4.5 6.5l2 2 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* Staff table */}
+      <div className="kds-table-wrap">
+        <table className="kds-table">
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th>이메일</th>
+              <th>역할</th>
+              <th>상태</th>
+              <th>PIN</th>
+              <th style={{ textAlign: "right" }}>작업</th>
+            </tr>
+          </thead>
+          <tbody>
+            {staffList.map((member) => (
+              <tr key={member.id} className={!member.active ? "row-inactive" : ""}>
+                <td>
+                  <div className="kds-table-cell-name">
+                    <div className="kds-staff-avatar-sm" aria-hidden="true">{member.name.slice(0, 1)}</div>
+                    <span>{member.name}</span>
+                  </div>
+                </td>
+                <td className="kds-table-cell-muted">{member.email}</td>
+                <td>
+                  <span className={`kds-badge${member.role === "manager" ? " accent" : ""}`}>
+                    {member.role === "manager" ? "매니저" : "직원"}
+                  </span>
+                </td>
+                <td>
+                  <span className={`kds-badge${member.active ? " green" : " dim"}`}>
+                    {member.active ? "활성" : "비활성"}
+                  </span>
+                </td>
+                <td>
+                  {pinVisible === member.id ? (
+                    <div className="kds-pin-reveal">
+                      <span className="kds-pin-value">{member.pin}</span>
+                      <button className="kds-icon-btn-xs" onClick={() => setPinVisible(null)} type="button" aria-label="PIN 숨기기">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                          <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                          <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="kds-pin-hidden">••••</span>
+                  )}
+                </td>
+                <td>
+                  <div className="kds-table-actions">
+                    <button className="kds-btn-ghost kds-btn-xs" onClick={() => setModal({ type: "pin", member })} type="button">PIN 재발급</button>
+                    <button className="kds-btn-ghost kds-btn-xs" onClick={() => openEdit(member)} type="button">수정</button>
+                    <button
+                      className={`kds-btn-ghost kds-btn-xs${member.active ? " danger" : " green"}`}
+                      onClick={() => setModal({ type: "deactivate", member })}
+                      type="button"
+                    >
+                      {member.active ? "비활성화" : "활성화"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Add / Edit modal */}
       {(modal?.type === "add" || modal?.type === "edit") ? (
         <div className="kds-modal-backdrop" onClick={() => setModal(null)}>
-          <div
-            className="kds-modal kds-modal--sm"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label={modal.type === "add" ? "직원 추가" : "직원 정보 수정"}
-          >
+          <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={modal.type === "add" ? "직원 추가" : "직원 정보 수정"}>
             <div className="kds-modal-head">
               <h2 className="kds-modal-title">{modal.type === "add" ? "직원 추가" : "직원 정보 수정"}</h2>
               <button className="kds-modal-close" onClick={() => setModal(null)} type="button" aria-label="닫기">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <line x1="12" y1="2" x2="2" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                  <line x1="1.5" y1="1.5" x2="11.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="11.5" y1="1.5" x2="1.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
@@ -1312,18 +1237,11 @@ function StaffPanel() {
                 <label className="kds-settings-label">역할</label>
                 <div className="kds-segmented">
                   {([["staff", "직원"], ["manager", "매니저"]] as const).map(([val, label]) => (
-                    <button
-                      key={val}
-                      className={`kds-segmented-btn${form.role === val ? " active" : ""}`}
-                      onClick={() => setForm((f) => ({ ...f, role: val }))}
-                      type="button"
-                    >{label}</button>
+                    <button key={val} className={`kds-segmented-btn${form.role === val ? " active" : ""}`} onClick={() => setForm((f) => ({ ...f, role: val }))} type="button">{label}</button>
                   ))}
                 </div>
               </div>
-              {modal.type === "add" ? (
-                <p className="kds-settings-hint">추가 후 4자리 PIN이 자동 발급됩니다.</p>
-              ) : null}
+              {modal.type === "add" ? <p className="kds-settings-hint">추가 후 4자리 PIN이 자동 발급됩니다.</p> : null}
               {formError ? <p className="kds-settings-error">{formError}</p> : null}
             </div>
             <div className="kds-modal-foot">
@@ -1334,23 +1252,12 @@ function StaffPanel() {
         </div>
       ) : null}
 
-      {/* PIN reissue modal */}
       {modal?.type === "pin" ? (
         <div className="kds-modal-backdrop" onClick={() => setModal(null)}>
-          <div
-            className="kds-modal kds-modal--sm"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="kds-modal-head">
-              <h2 className="kds-modal-title">PIN 재발급</h2>
-            </div>
+          <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="kds-modal-head"><h2 className="kds-modal-title">PIN 재발급</h2></div>
             <div className="kds-modal-body">
-              <p className="kds-modal-desc">
-                <strong>{modal.member.name}</strong>의 PIN을 새로 발급하시겠습니까?<br />
-                기존 PIN은 즉시 사용 불가 처리됩니다.
-              </p>
+              <p className="kds-modal-desc"><strong>{modal.member.name}</strong>의 PIN을 새로 발급하시겠습니까?<br />기존 PIN은 즉시 사용 불가 처리됩니다.</p>
             </div>
             <div className="kds-modal-foot">
               <button className="kds-modal-btn secondary" onClick={() => setModal(null)} type="button">취소</button>
@@ -1360,18 +1267,10 @@ function StaffPanel() {
         </div>
       ) : null}
 
-      {/* Deactivate / Activate modal */}
       {modal?.type === "deactivate" ? (
         <div className="kds-modal-backdrop" onClick={() => setModal(null)}>
-          <div
-            className="kds-modal kds-modal--sm"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="kds-modal-head">
-              <h2 className="kds-modal-title">{modal.member.active ? "직원 비활성화" : "직원 활성화"}</h2>
-            </div>
+          <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="kds-modal-head"><h2 className="kds-modal-title">{modal.member.active ? "직원 비활성화" : "직원 활성화"}</h2></div>
             <div className="kds-modal-body">
               <p className="kds-modal-desc">
                 <strong>{modal.member.name}</strong>을(를) {modal.member.active ? "비활성화" : "활성화"}하시겠습니까?
@@ -1380,11 +1279,7 @@ function StaffPanel() {
             </div>
             <div className="kds-modal-foot">
               <button className="kds-modal-btn secondary" onClick={() => setModal(null)} type="button">취소</button>
-              <button
-                className={`kds-modal-btn${modal.member.active ? " danger" : " primary"}`}
-                onClick={() => toggleActive(modal.member)}
-                type="button"
-              >
+              <button className={`kds-modal-btn${modal.member.active ? " danger" : " primary"}`} onClick={() => toggleActive(modal.member)} type="button">
                 {modal.member.active ? "비활성화" : "활성화"}
               </button>
             </div>
@@ -1415,10 +1310,8 @@ function MyTasksPanel({
   const [menuInput, setMenuInput] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<AssignedMenu | null>(null);
 
-  // Items from active (NEW/COOKING) orders that match assigned menus
   const assignedNames = useMemo(() => new Set(assignedMenus.map((m) => m.name.trim())), [assignedMenus]);
 
-  // Count remaining (not completed) items per assigned menu from active orders
   const remainingCounts = useMemo(() => {
     const counts = new Map<string, number>();
     assignedMenus.forEach((m) => counts.set(m.name, 0));
@@ -1435,7 +1328,6 @@ function MyTasksPanel({
     return counts;
   }, [assignedMenus, assignedNames, completedItemIds, orders]);
 
-  // History rows: all order items matching assigned menus, sorted newest first
   type HistoryRow = {
     orderNumber: string;
     menuName: string;
@@ -1462,20 +1354,12 @@ function MyTasksPanel({
           });
         });
       });
-    // newest first
     rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     return rows;
   }, [assignedNames, completedItemIds, orders]);
 
-  function openAdd() {
-    setMenuInput("");
-    setMenuModal({ type: "add" });
-  }
-
-  function openEdit(menu: AssignedMenu) {
-    setMenuInput(menu.name);
-    setMenuModal({ type: "edit", menu });
-  }
+  function openAdd() { setMenuInput(""); setMenuModal({ type: "add" }); }
+  function openEdit(menu: AssignedMenu) { setMenuInput(menu.name); setMenuModal({ type: "edit", menu }); }
 
   function saveMenu() {
     const name = menuInput.trim();
@@ -1497,69 +1381,50 @@ function MyTasksPanel({
   function formatHistoryTime(timestamp: string) {
     const d = parseApiTimestamp(timestamp);
     if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleString("ko-KR", {
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return d.toLocaleString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
   return (
     <section className="kds-panel" aria-label="내 업무">
       {/* Header */}
-      <div className="kds-my-tasks-head">
-        <div className="kds-panel-head">
+      <div className="kds-panel-header">
+        <div>
           <h2 className="kds-panel-title">내 업무</h2>
           <p className="kds-panel-subtitle">담당 메뉴의 진행 중 수량</p>
         </div>
-        <button className="kds-add-menu-btn" onClick={openAdd} type="button">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-            <line x1="6.5" y1="1" x2="6.5" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <button className="kds-btn-primary kds-btn-sm" onClick={openAdd} type="button">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           </svg>
           메뉴 추가
         </button>
       </div>
 
-      {/* Menu summary cards */}
+      {/* Menu compact rows */}
       {assignedMenus.length === 0 ? (
-        <div className="kds-my-tasks-empty">
-          <p>담당 메뉴가 없습니다. [메뉴 추가]를 눌러 추가하세요.</p>
-        </div>
+        <p className="kds-panel-empty">담당 메뉴가 없습니다. 메뉴 추가를 눌러 추가하세요.</p>
       ) : (
-        <div className="kds-menu-cards">
+        <div className="kds-menu-rows">
           {assignedMenus.map((menu) => {
             const count = remainingCounts.get(menu.name) ?? 0;
             return (
-              <div className={`kds-menu-card${count === 0 ? " inactive" : ""}`} key={menu.id}>
-                <div className="kds-menu-card-actions">
-                  <button
-                    className="kds-menu-card-btn"
-                    onClick={() => openEdit(menu)}
-                    title="수정"
-                    type="button"
-                    aria-label={`${menu.name} 수정`}
-                  >
+              <div className={`kds-menu-row${count === 0 ? " idle" : ""}`} key={menu.id}>
+                <div className="kds-menu-row-count">{count}</div>
+                <span className="kds-menu-row-name">{menu.name}</span>
+                <div className="kds-menu-row-actions">
+                  <button className="kds-icon-btn-xs" onClick={() => openEdit(menu)} title="수정" type="button" aria-label={`${menu.name} 수정`}>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                      <path d="M2 9.5l6.5-6.5 2 2L4 11.5H2V9.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                      <path d="M2 9l6-6 2 2-6 6H2V9z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                     </svg>
                   </button>
-                  <button
-                    className="kds-menu-card-btn danger"
-                    onClick={() => setDeleteTarget(menu)}
-                    title="삭제"
-                    type="button"
-                    aria-label={`${menu.name} 삭제`}
-                  >
+                  <button className="kds-icon-btn-xs danger" onClick={() => setDeleteTarget(menu)} title="삭제" type="button" aria-label={`${menu.name} 삭제`}>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                      <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                      <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <line x1="1.5" y1="1.5" x2="10.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                      <line x1="10.5" y1="1.5" x2="1.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
                     </svg>
                   </button>
                 </div>
-                <span className="kds-menu-card-name">{menu.name}</span>
-                <span className="kds-menu-card-count">{count}</span>
               </div>
             );
           })}
@@ -1567,73 +1432,57 @@ function MyTasksPanel({
       )}
 
       {/* History table */}
-      <div className="kds-history-section">
-        <h3 className="kds-stats-section-title">업무 히스토리</h3>
-        {historyRows.length === 0 ? (
-          <p className="kds-stats-empty">관련 주문 내역이 없습니다.</p>
-        ) : (
-          <div className="kds-history-table-wrap">
-            <table className="kds-history-table">
-              <thead>
-                <tr>
-                  <th>주문번호</th>
-                  <th>메뉴</th>
-                  <th>갯수</th>
-                  <th>시각</th>
-                  <th>상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historyRows.map((row, idx) => (
-                  <tr key={`${row.orderNumber}-${row.itemId}-${idx}`} className={row.status === "완료" ? "row-done" : ""}>
-                    <td className="cell-order-num">{row.orderNumber}</td>
-                    <td>{row.menuName}</td>
-                    <td className="cell-qty">{row.quantity}</td>
-                    <td className="cell-time">{formatHistoryTime(row.timestamp)}</td>
-                    <td>
-                      <span className={`kds-status-chip ${row.status === "완료" ? "done" : "active"}`}>
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="kds-section-divider">
+        <span className="kds-section-label">업무 히스토리</span>
       </div>
+      {historyRows.length === 0 ? (
+        <p className="kds-panel-empty">관련 주문 내역이 없습니다.</p>
+      ) : (
+        <div className="kds-table-wrap">
+          <table className="kds-table">
+            <thead>
+              <tr>
+                <th>주문번호</th>
+                <th>메뉴</th>
+                <th style={{ textAlign: "center" }}>수량</th>
+                <th>시각</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historyRows.map((row, idx) => (
+                <tr key={`${row.orderNumber}-${row.itemId}-${idx}`} className={row.status === "완료" ? "row-done" : ""}>
+                  <td className="kds-table-cell-muted">{row.orderNumber}</td>
+                  <td>{row.menuName}</td>
+                  <td style={{ textAlign: "center", fontWeight: 700 }}>{row.quantity}</td>
+                  <td className="kds-table-cell-muted">{formatHistoryTime(row.timestamp)}</td>
+                  <td>
+                    <span className={`kds-badge${row.status === "완료" ? " dim" : " accent"}`}>{row.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Add / Edit menu modal */}
       {menuModal ? (
         <div className="kds-modal-backdrop" onClick={() => setMenuModal(null)}>
-          <div
-            className="kds-modal kds-modal--sm"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label={menuModal.type === "add" ? "담당 메뉴 추가" : "담당 메뉴 수정"}
-          >
+          <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={menuModal.type === "add" ? "담당 메뉴 추가" : "담당 메뉴 수정"}>
             <div className="kds-modal-head">
               <h2 className="kds-modal-title">{menuModal.type === "add" ? "담당 메뉴 추가" : "담당 메뉴 수정"}</h2>
               <button className="kds-modal-close" onClick={() => setMenuModal(null)} type="button" aria-label="닫기">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <line x1="12" y1="2" x2="2" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                  <line x1="1.5" y1="1.5" x2="11.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="11.5" y1="1.5" x2="1.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
             <div className="kds-modal-body">
               <div className="kds-settings-field">
                 <label className="kds-settings-label" htmlFor="menu-name-input">메뉴명</label>
-                <input
-                  id="menu-name-input"
-                  type="text"
-                  value={menuInput}
-                  onChange={(e) => setMenuInput(e.target.value)}
-                  placeholder="예: 짜장면"
-                  autoFocus
-                  onKeyDown={(e) => { if (e.key === "Enter") saveMenu(); }}
-                />
+                <input id="menu-name-input" type="text" value={menuInput} onChange={(e) => setMenuInput(e.target.value)} placeholder="예: 짜장면" autoFocus onKeyDown={(e) => { if (e.key === "Enter") saveMenu(); }} />
               </div>
             </div>
             <div className="kds-modal-foot">
@@ -1644,22 +1493,12 @@ function MyTasksPanel({
         </div>
       ) : null}
 
-      {/* Delete confirm modal */}
       {deleteTarget ? (
         <div className="kds-modal-backdrop" onClick={() => setDeleteTarget(null)}>
-          <div
-            className="kds-modal kds-modal--sm"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="kds-modal-head">
-              <h2 className="kds-modal-title">담당 메뉴 삭제</h2>
-            </div>
+          <div className="kds-modal kds-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="kds-modal-head"><h2 className="kds-modal-title">담당 메뉴 삭제</h2></div>
             <div className="kds-modal-body">
-              <p className="kds-modal-desc">
-                <strong>{deleteTarget.name}</strong> 담당 메뉴를 삭제하시겠습니까?
-              </p>
+              <p className="kds-modal-desc"><strong>{deleteTarget.name}</strong> 담당 메뉴를 삭제하시겠습니까?</p>
             </div>
             <div className="kds-modal-foot">
               <button className="kds-modal-btn secondary" onClick={() => setDeleteTarget(null)} type="button">아니오</button>
@@ -1684,10 +1523,10 @@ function StatsPanel({ orders }: { orders: Order[] }) {
     return ts.startsWith(todayStr);
   });
 
-  const doneOrders = todayOrders.filter((o) => o.status === "DONE");
+  const doneToday = todayOrders.filter((o) => o.status === "DONE");
   const totalRevenue = todayOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + (i.total_price ?? 0), 0), 0);
+  const completionRate = todayOrders.length > 0 ? Math.round((doneToday.length / todayOrders.length) * 100) : 0;
 
-  // Menu count map
   const menuMap = new Map<string, number>();
   todayOrders.forEach((o) => {
     o.items.forEach((item) => {
@@ -1695,50 +1534,60 @@ function StatsPanel({ orders }: { orders: Order[] }) {
     });
   });
   const sortedMenus = Array.from(menuMap.entries()).sort((a, b) => b[1] - a[1]);
+  const maxCount = sortedMenus[0]?.[1] ?? 1;
 
   return (
     <section className="kds-panel" aria-label="통계">
-      <div className="kds-panel-head">
-        <h2 className="kds-panel-title">오늘 통계</h2>
-        <p className="kds-panel-subtitle">{todayStr}</p>
-      </div>
-
-      <div className="kds-stats-summary">
-        <div className="kds-stat-card">
-          <span className="kds-stat-label">총 주문</span>
-          <span className="kds-stat-value">{todayOrders.length}<small>건</small></span>
-        </div>
-        <div className="kds-stat-card">
-          <span className="kds-stat-label">완료</span>
-          <span className="kds-stat-value accent">{doneOrders.length}<small>건</small></span>
-        </div>
-        <div className="kds-stat-card">
-          <span className="kds-stat-label">총 매출</span>
-          <span className="kds-stat-value">{totalRevenue > 0 ? totalRevenue.toLocaleString() : "-"}<small>{totalRevenue > 0 ? "원" : ""}</small></span>
+      <div className="kds-panel-header">
+        <div>
+          <h2 className="kds-panel-title">오늘 통계</h2>
+          <p className="kds-panel-subtitle">{todayStr}</p>
         </div>
       </div>
 
-      <div className="kds-stats-section">
-        <h3 className="kds-stats-section-title">메뉴별 주문 수</h3>
-        {sortedMenus.length === 0 ? (
-          <p className="kds-stats-empty">오늘 주문된 메뉴가 없습니다.</p>
-        ) : (
-          <div className="kds-menu-stats">
-            {sortedMenus.map(([name, count]) => {
-              const max = sortedMenus[0][1];
-              return (
-                <div className="kds-menu-stat-row" key={name}>
-                  <span className="kds-menu-stat-name">{name}</span>
-                  <div className="kds-menu-stat-bar-wrap">
-                    <div className="kds-menu-stat-bar" style={{ width: `${Math.round((count / max) * 100)}%` }} />
-                  </div>
-                  <span className="kds-menu-stat-count">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* Inline metric strip */}
+      <div className="kds-metric-strip">
+        <div className="kds-metric">
+          <span className="kds-metric-value">{todayOrders.length}</span>
+          <span className="kds-metric-label">총 주문</span>
+        </div>
+        <div className="kds-metric-divider" />
+        <div className="kds-metric">
+          <span className="kds-metric-value accent">{doneToday.length}</span>
+          <span className="kds-metric-label">완료</span>
+        </div>
+        <div className="kds-metric-divider" />
+        <div className="kds-metric">
+          <span className="kds-metric-value">{completionRate}%</span>
+          <span className="kds-metric-label">완료율</span>
+        </div>
+        <div className="kds-metric-divider" />
+        <div className="kds-metric">
+          <span className="kds-metric-value">{totalRevenue > 0 ? `${totalRevenue.toLocaleString()}원` : "-"}</span>
+          <span className="kds-metric-label">매출</span>
+        </div>
       </div>
+
+      {/* Menu breakdown */}
+      <div className="kds-section-divider">
+        <span className="kds-section-label">메뉴별 주문 수</span>
+      </div>
+
+      {sortedMenus.length === 0 ? (
+        <p className="kds-panel-empty">오늘 주문된 메뉴가 없습니다.</p>
+      ) : (
+        <div className="kds-menu-stat-list">
+          {sortedMenus.map(([name, count]) => (
+            <div className="kds-menu-stat-row" key={name}>
+              <span className="kds-menu-stat-name">{name}</span>
+              <div className="kds-menu-stat-bar-wrap">
+                <div className="kds-menu-stat-bar" style={{ width: `${Math.round((count / maxCount) * 100)}%` }} />
+              </div>
+              <span className="kds-menu-stat-count">{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -1773,74 +1622,77 @@ function SettingsPanel({
 
   return (
     <section className="kds-panel" aria-label="설정">
-      <div className="kds-panel-head">
-        <h2 className="kds-panel-title">설정</h2>
+      <div className="kds-panel-header">
+        <div>
+          <h2 className="kds-panel-title">설정</h2>
+          <p className="kds-panel-subtitle">운영 환경 및 알림 설정</p>
+        </div>
       </div>
 
-      <div className="kds-settings-groups">
-        {/* 알림 */}
-        <div className="kds-settings-group">
-          <h3 className="kds-settings-group-title">알림</h3>
-
-          <div className="kds-settings-row">
-            <div className="kds-settings-row-info">
-              <span className="kds-settings-row-label">알림</span>
-              <span className="kds-settings-row-desc">주문 도착 시 알림을 받습니다</span>
-            </div>
-            <button
-              className={`kds-toggle${settings.notificationsEnabled ? " on" : ""}`}
-              onClick={() => onUpdate({ notificationsEnabled: !settings.notificationsEnabled })}
-              type="button"
-              role="switch"
-              aria-checked={settings.notificationsEnabled}
-            >
-              <span className="kds-toggle-knob" />
-            </button>
+      {/* Section: 알림 */}
+      <div className="kds-section-divider">
+        <span className="kds-section-label">알림</span>
+      </div>
+      <div className="kds-settings-rows">
+        <div className="kds-settings-row">
+          <div className="kds-settings-row-info">
+            <span className="kds-settings-row-label">알림 활성화</span>
+            <span className="kds-settings-row-desc">주문 도착 시 알림을 받습니다</span>
           </div>
-
-          <div className="kds-settings-row">
-            <div className="kds-settings-row-info">
-              <span className="kds-settings-row-label">알림 사운드</span>
-              <span className="kds-settings-row-desc">주문 도착 시 재생할 사운드</span>
-            </div>
-            <div className="kds-segmented">
-              {SOUND_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  className={`kds-segmented-btn${settings.sound === opt.value ? " active" : ""}`}
-                  disabled={!settings.notificationsEnabled}
-                  onClick={() => onUpdate({ sound: opt.value })}
-                  type="button"
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <button
+            className={`kds-toggle${settings.notificationsEnabled ? " on" : ""}`}
+            onClick={() => onUpdate({ notificationsEnabled: !settings.notificationsEnabled })}
+            type="button"
+            role="switch"
+            aria-checked={settings.notificationsEnabled}
+          >
+            <span className="kds-toggle-knob" />
+          </button>
         </div>
 
-        {/* 브레이크타임 */}
-        <div className="kds-settings-group">
-          <h3 className="kds-settings-group-title">브레이크타임</h3>
-
-          <div className="kds-settings-row">
-            <div className="kds-settings-row-info">
-              <span className="kds-settings-row-label">브레이크타임 사용</span>
-              <span className="kds-settings-row-desc">설정 시간에 자동으로 일시중지</span>
-            </div>
-            <button
-              className={`kds-toggle${settings.breaktime.enabled ? " on" : ""}`}
-              onClick={() => onUpdate({ breaktime: { ...settings.breaktime, enabled: !settings.breaktime.enabled } })}
-              type="button"
-              role="switch"
-              aria-checked={settings.breaktime.enabled}
-            >
-              <span className="kds-toggle-knob" />
-            </button>
+        <div className="kds-settings-row">
+          <div className="kds-settings-row-info">
+            <span className="kds-settings-row-label">알림 사운드</span>
+            <span className="kds-settings-row-desc">주문 도착 시 재생할 사운드</span>
           </div>
+          <div className="kds-segmented">
+            {SOUND_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`kds-segmented-btn${settings.sound === opt.value ? " active" : ""}`}
+                disabled={!settings.notificationsEnabled}
+                onClick={() => onUpdate({ sound: opt.value })}
+                type="button"
+              >{opt.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-          {settings.breaktime.enabled ? (
-            <div className="kds-settings-breaktime">
+      {/* Section: 브레이크타임 */}
+      <div className="kds-section-divider">
+        <span className="kds-section-label">브레이크타임</span>
+      </div>
+      <div className="kds-settings-rows">
+        <div className="kds-settings-row">
+          <div className="kds-settings-row-info">
+            <span className="kds-settings-row-label">브레이크타임 사용</span>
+            <span className="kds-settings-row-desc">설정 시간에 자동으로 일시중지</span>
+          </div>
+          <button
+            className={`kds-toggle${settings.breaktime.enabled ? " on" : ""}`}
+            onClick={() => onUpdate({ breaktime: { ...settings.breaktime, enabled: !settings.breaktime.enabled } })}
+            type="button"
+            role="switch"
+            aria-checked={settings.breaktime.enabled}
+          >
+            <span className="kds-toggle-knob" />
+          </button>
+        </div>
+
+        {settings.breaktime.enabled ? (
+          <div className="kds-settings-row kds-settings-row--sub">
+            <div className="kds-settings-field-row">
               <div className="kds-settings-field">
                 <label className="kds-settings-label" htmlFor="bt-start">시작 시간</label>
                 <input
@@ -1865,71 +1717,65 @@ function SettingsPanel({
                 />
               </div>
             </div>
-          ) : null}
-        </div>
-
-        {/* 주문 자동수락 */}
-        <div className="kds-settings-group">
-          <h3 className="kds-settings-group-title">주문 처리</h3>
-
-          <div className="kds-settings-row">
-            <div className="kds-settings-row-info">
-              <span className="kds-settings-row-label">주문 자동수락</span>
-              <span className="kds-settings-row-desc">
-                {settings.autoAccept ? "주문 수신 즉시 진행중 표시" : "수락 버튼을 눌러야 진행중 표시"}
-              </span>
-            </div>
-            <button
-              className={`kds-toggle${settings.autoAccept ? " on" : ""}`}
-              onClick={() => onUpdate({ autoAccept: !settings.autoAccept })}
-              type="button"
-              role="switch"
-              aria-checked={settings.autoAccept}
-            >
-              <span className="kds-toggle-knob" />
-            </button>
           </div>
-        </div>
+        ) : null}
+      </div>
 
-        {/* 계정 */}
-        <div className="kds-settings-group">
-          <h3 className="kds-settings-group-title">계정</h3>
-          <div className="kds-settings-row">
-            <div className="kds-settings-row-info">
-              <span className="kds-settings-row-label">비밀번호 변경</span>
-              <span className="kds-settings-row-desc">변경 후 자동 로그아웃됩니다</span>
-            </div>
-            <button className="kds-settings-action-btn" onClick={onChangePasswordClick} type="button">
-              변경
-            </button>
+      {/* Section: 주문 처리 */}
+      <div className="kds-section-divider">
+        <span className="kds-section-label">주문 처리</span>
+      </div>
+      <div className="kds-settings-rows">
+        <div className="kds-settings-row">
+          <div className="kds-settings-row-info">
+            <span className="kds-settings-row-label">주문 자동수락</span>
+            <span className="kds-settings-row-desc">
+              {settings.autoAccept ? "주문 수신 즉시 진행중 표시" : "수락 버튼을 눌러야 진행중 표시"}
+            </span>
           </div>
+          <button
+            className={`kds-toggle${settings.autoAccept ? " on" : ""}`}
+            onClick={() => onUpdate({ autoAccept: !settings.autoAccept })}
+            type="button"
+            role="switch"
+            aria-checked={settings.autoAccept}
+          >
+            <span className="kds-toggle-knob" />
+          </button>
+        </div>
+      </div>
+
+      {/* Section: 계정 */}
+      <div className="kds-section-divider">
+        <span className="kds-section-label">계정</span>
+      </div>
+      <div className="kds-settings-rows">
+        <div className="kds-settings-row">
+          <div className="kds-settings-row-info">
+            <span className="kds-settings-row-label">비밀번호 변경</span>
+            <span className="kds-settings-row-desc">변경 후 자동 로그아웃됩니다</span>
+          </div>
+          <button className="kds-btn-ghost kds-btn-sm" onClick={onChangePasswordClick} type="button">변경</button>
         </div>
       </div>
     </section>
   );
 }
 
+// ─────────────────────────────────────────────
+// Pure utility functions
+// ─────────────────────────────────────────────
 function getOrderTypeLabel(platform: string) {
-  const normalized = platform?.toLowerCase() ?? "";
-  if (normalized.includes("delivery") || normalized.includes("배달")) {
-    return "배달";
-  }
-  if (normalized.includes("takeout") || normalized.includes("포장") || normalized.includes("take")) {
-    return "포장";
-  }
+  const n = platform?.toLowerCase() ?? "";
+  if (n.includes("delivery") || n.includes("배달")) return "배달";
+  if (n.includes("takeout") || n.includes("포장") || n.includes("take")) return "포장";
   return "매장";
 }
 
 function getActionTone(action: AnalysisAction) {
-  if (action.type === "ALLERGY" || action.type === "SAFETY_CHECK" || action.severity === "HIGH") {
-    return "danger";
-  }
-  if (action.type === "COOKING_REQUEST" || action.type === "TASTE_ADJUSTMENT") {
-    return "cook";
-  }
-  if (action.type === "EXCLUDE_INGREDIENT") {
-    return "exclude";
-  }
+  if (action.type === "ALLERGY" || action.type === "SAFETY_CHECK" || action.severity === "HIGH") return "danger";
+  if (action.type === "COOKING_REQUEST" || action.type === "TASTE_ADJUSTMENT") return "cook";
+  if (action.type === "EXCLUDE_INGREDIENT") return "exclude";
   return "neutral";
 }
 
@@ -1943,28 +1789,17 @@ function getAllergyRiskItemIds(analysis: OrderAIAnalysis | null) {
 
 function getElapsedMinutes(now: number, timestamp: string) {
   const start = parseApiTimestamp(timestamp).getTime();
-  if (Number.isNaN(start)) {
-    return 0;
-  }
+  if (Number.isNaN(start)) return 0;
   return Math.floor((now - start) / 60000);
 }
 
 function formatElapsed(now: number, timestamp: string) {
   const start = parseApiTimestamp(timestamp).getTime();
-  if (Number.isNaN(start)) {
-    return "-";
-  }
-
+  if (Number.isNaN(start)) return "-";
   const seconds = Math.max(0, Math.floor((now - start) / 1000));
-  if (seconds < 60) {
-    return `${seconds}초`;
-  }
-
+  if (seconds < 60) return `${seconds}초`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    return `${minutes}분`;
-  }
-
+  if (minutes < 60) return `${minutes}분`;
   return `${Math.floor(minutes / 60)}시간`;
 }
 
