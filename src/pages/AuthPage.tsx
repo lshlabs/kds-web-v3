@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ChefHat } from "lucide-react";
 
 import { API_ORIGIN, ApiError, apiLogin, apiRegister } from "../lib/api";
 import type {
@@ -204,7 +205,9 @@ export function AuthPage({
       <section className="auth-hero" aria-hidden="true">
         <div className="auth-hero-top">
           <div className="auth-brand">
-            <div className="auth-brand-icon">D</div>
+            <div className="auth-brand-icon">
+              <ChefHat size={16} aria-hidden="true" />
+            </div>
             <span className="auth-brand-name">DeepOrder KDS</span>
           </div>
 

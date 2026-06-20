@@ -8,6 +8,7 @@ import {
   Info,
   LogOut,
   Menu,
+  Minus,
   MoreVertical,
   Pencil,
   Plus,
@@ -24,6 +25,8 @@ import { isDevPreviewAccessToken, loadPreviewOrders, updatePreviewOrderStatus } 
 import type { AnalysisAction, AuthSession, Order, OrderAIAnalysis, OrderStatus } from "../types";
 
 const POLLING_INTERVAL_MS = 3000;
+const ORDER_CARD_STACK_GAP_PX = 10;
+const ORDER_CARD_SHORT_RATIO = 0.58;
 type BoardTab = "RECEIVED" | "DONE" | "MY_TASKS" | "STATS" | "SETTINGS" | "STAFF";
 
 type StoreStatus = "OPEN" | "PAUSED" | "CLOSED";
@@ -41,6 +44,11 @@ type StaffMember = {
 type AssignedMenu = {
   id: string;
   name: string;
+};
+
+type OrderLayoutColumn = {
+  orders: Order[];
+  width: "base" | "wide" | "xwide";
 };
 
 type SoundOption = "none" | "bell" | "chime" | "beep";
@@ -106,6 +114,9 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
   const [pwSubmitting, setPwSubmitting] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const laneRef = useRef<HTMLDivElement>(null);
+  const [laneHeight, setLaneHeight] = useState(0);
+  const [orderCardHeights, setOrderCardHeights] = useState<Record<number, number>>({});
 
   function showToast(message: string, type: "error" | "info" = "error") {
     setToast({ message, type });
@@ -171,6 +182,16 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  useEffect(() => {
+    const laneEl = laneRef.current;
+    if (!laneEl) return;
+    const updateLaneHeight = () => setLaneHeight(laneEl.clientHeight);
+    updateLaneHeight();
+    const observer = new ResizeObserver(() => updateLaneHeight());
+    observer.observe(laneEl);
+    return () => observer.disconnect();
+  }, [activeTab, orders, hiddenOrderIds]);
 
   const counts = useMemo(
     () => ({
@@ -261,6 +282,10 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
 
   const isManager = session.user.role === "STORE_OWNER" || session.user.role === "ADMIN";
   const activeOrders = activeTab === "RECEIVED" ? receivedOrders : doneOrders;
+  const orderLayoutColumns = useMemo(
+    () => buildOrderLayoutColumns(activeOrders, orderCardHeights, laneHeight),
+    [activeOrders, laneHeight, orderCardHeights],
+  );
   const initials = (session.user.name ?? session.store.storeName ?? "?").slice(0, 2).toUpperCase();
 
   return (
@@ -381,7 +406,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                 type="button"
                 aria-label="매장 상태 변경"
               >
-                <span className="kds-store-status-dot" aria-hidden="true" />
+                <StoreStatusDot status={storeStatus} />
                 {storeStatus === "OPEN" ? "영업중" : storeStatus === "PAUSED" ? "일시중지" : "영업종료"}
               </button>
 
@@ -395,7 +420,7 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                       onClick={() => { setStoreStatus(s); if (s !== "PAUSED") setStoreStatusPopup(false); }}
                       type="button"
                     >
-                      <span className={`kds-store-status-dot kds-store-status-dot--${s.toLowerCase()}`} aria-hidden="true" />
+                      <StoreStatusDot status={s} />
                       {s === "OPEN" ? "영업중" : s === "PAUSED" ? "일시중지" : "영업종료"}
                     </button>
                   ))}
@@ -408,14 +433,18 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                           onClick={() => setPauseMinutes((m) => Math.max(10, m - 10))}
                           type="button"
                           aria-label="10분 감소"
-                        >−</button>
+                        >
+                          <Minus size={16} aria-hidden="true" />
+                        </button>
                         <span className="kds-pause-duration-value">{pauseMinutes}분</span>
                         <button
                           className="kds-pause-stepper"
                           onClick={() => setPauseMinutes((m) => m + 10)}
                           type="button"
                           aria-label="10분 증가"
-                        >+</button>
+                        >
+                          <Plus size={16} aria-hidden="true" />
+                        </button>
                       </div>
                       <button
                         className="kds-pause-confirm"
@@ -534,18 +563,28 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                 {loading ? "주문을 불러오는 중…" : activeTab === "RECEIVED" ? "접수된 주문이 없습니다" : "완료된 주문이 없습니다"}
               </div>
             ) : (
-              <div className="kds-lane">
-                {activeOrders.map((order) => (
-                  <OrderCard
-                    key={order.id}
-                    completedItemIds={completedItemIds}
-                    now={now}
-                    onContextMenu={(orderId, x, y) => setContextMenu({ orderId, x, y })}
-                    onToggleItemDone={() => showLocalOnlyNotice("메뉴 완료 체크")}
-                    onUpdateStatus={updateOrderStatus}
-                    order={order}
-                    updating={updatingOrderId === order.id}
-                  />
+              <div className="kds-lane" ref={laneRef}>
+                {orderLayoutColumns.map((column) => (
+                  <div
+                    className={`kds-lane-column kds-lane-column--${column.width}${column.orders.length > 1 ? " stacked" : ""}`}
+                    key={`${column.width}-${column.orders.map((order) => order.id).join("-")}`}
+                  >
+                    {column.orders.map((order) => (
+                      <OrderCard
+                        key={order.id}
+                        completedItemIds={completedItemIds}
+                        now={now}
+                        onContextMenu={(orderId, x, y) => setContextMenu({ orderId, x, y })}
+                        onHeightChange={(height) => {
+                          setOrderCardHeights((prev) => (prev[order.id] === height ? prev : { ...prev, [order.id]: height }));
+                        }}
+                        onToggleItemDone={() => showLocalOnlyNotice("메뉴 완료 체크")}
+                        onUpdateStatus={updateOrderStatus}
+                        order={order}
+                        updating={updatingOrderId === order.id}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
             )}
@@ -586,6 +625,10 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
         const order = orders.find((o) => o.id === detailOrderId);
         if (!order) return null;
         const totalAmount = order.items.reduce((sum, item) => sum + (item.total_price ?? 0), 0);
+        const orderedTime = order.ordered_at ? formatDetailTime(order.ordered_at) : formatDetailTime(order.created_at);
+        const platformLabel = getOrderTypeLabel(order.platform);
+        const store = session.store;
+        const deliveryAddress = `${store.roadAddress ?? store.jibunAddress ?? "-"}${store.addressDetail ? ` ${store.addressDetail}` : ""}`;
         return (
           <div className="kds-modal-backdrop" onClick={() => setDetailOrderId(null)}>
             <div className="kds-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="주문 상세정보">
@@ -596,56 +639,72 @@ export function KdsPage({ session, onLogout, onUnauthorized }: KdsPageProps) {
                 </button>
               </div>
               <div className="kds-modal-body">
-                <div className="kds-detail-rows">
-                  <div className="kds-detail-row"><span>주문 시간</span><strong>{order.ordered_at ? formatDetailTime(order.ordered_at) : formatDetailTime(order.created_at)}</strong></div>
-                  <div className="kds-detail-row"><span>플랫폼</span><strong>{getOrderTypeLabel(order.platform)} ({order.platform})</strong></div>
+                <div className="kds-detail-summary" aria-label="주문 요약">
+                  <span>{orderedTime}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{platformLabel}</span>
                   {totalAmount > 0 ? (
-                    <div className="kds-detail-row"><span>결제금액</span><strong>{totalAmount.toLocaleString()}원</strong></div>
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <strong>{totalAmount.toLocaleString()}원</strong>
+                    </>
                   ) : null}
                 </div>
-                <div className="kds-detail-section-label">메뉴</div>
-                <div className="kds-detail-items">
-                  {order.items.map((item) => (
-                    <div className="kds-detail-item" key={item.id}>
-                      <span className="kds-detail-item-qty">{item.quantity}</span>
-                      <div>
-                        <div className="kds-detail-item-name">{item.name}</div>
-                        {item.options.length > 0 ? (
-                          <ul className="kds-detail-item-options">
-                            {item.options.map((opt, i) => <li key={i}>{opt}</li>)}
-                          </ul>
+                <section className="kds-detail-section" aria-labelledby="kds-detail-menu-title">
+                  <div className="kds-detail-section-head">
+                    <div className="kds-detail-section-label" id="kds-detail-menu-title">주문 메뉴</div>
+                    <div className="kds-detail-section-meta">{order.items.length}개</div>
+                  </div>
+                  <div className="kds-detail-items">
+                    {order.items.map((item) => (
+                      <div className="kds-detail-item" key={item.id}>
+                        <span className="kds-detail-item-qty">{item.quantity}</span>
+                        <div className="kds-detail-item-main">
+                          <div className="kds-detail-item-name">{item.name}</div>
+                          {item.options.length > 0 ? (
+                            <ul className="kds-detail-item-options">
+                              {item.options.map((opt, i) => <li key={i}>{opt}</li>)}
+                            </ul>
+                          ) : null}
+                        </div>
+                        {item.total_price ? (
+                          <span className="kds-detail-item-price">{item.total_price.toLocaleString()}원</span>
                         ) : null}
                       </div>
-                      {item.total_price ? (
-                        <span className="kds-detail-item-price">{item.total_price.toLocaleString()}원</span>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-                {order.customer_request ? (
-                  <>
-                    <div className="kds-detail-section-label">요청사항</div>
-                    <p className="kds-detail-text">{order.customer_request}</p>
-                  </>
-                ) : null}
+                    ))}
+                  </div>
+                </section>
+                <section className="kds-detail-section" aria-labelledby="kds-detail-request-title">
+                  <div className="kds-detail-section-head">
+                    <div className="kds-detail-section-label" id="kds-detail-request-title">요청사항</div>
+                  </div>
+                  <p className={`kds-detail-text${order.customer_request ? "" : " empty"}`}>
+                    {order.customer_request?.trim() || "없음"}
+                  </p>
+                </section>
                 {order.delivery_request ? (
-                  <>
-                    <div className="kds-detail-section-label">배달 요청</div>
+                  <section className="kds-detail-section" aria-labelledby="kds-detail-delivery-request-title">
+                    <div className="kds-detail-section-head">
+                      <div className="kds-detail-section-label" id="kds-detail-delivery-request-title">배달 요청</div>
+                    </div>
                     <p className="kds-detail-text">{order.delivery_request}</p>
-                  </>
+                  </section>
                 ) : null}
-                <div className="kds-detail-section-label kds-detail-sensitive-label">민감정보</div>
-                <div className="kds-detail-rows">
-                  {(() => {
-                    const store = (session as AuthSession).store;
-                    return (
-                      <>
-                        <div className="kds-detail-row"><span>주소</span><strong>{store.roadAddress ?? store.jibunAddress ?? "-"}{store.addressDetail ? ` ${store.addressDetail}` : ""}</strong></div>
-                        <div className="kds-detail-row"><span>연락처</span><strong>{store.phone ?? "-"}</strong></div>
-                      </>
-                    );
-                  })()}
-                </div>
+                <section className="kds-detail-section" aria-labelledby="kds-detail-delivery-title">
+                  <div className="kds-detail-section-head">
+                    <div className="kds-detail-section-label" id="kds-detail-delivery-title">배송 정보</div>
+                  </div>
+                  <div className="kds-detail-rows">
+                    <div className="kds-detail-row">
+                      <span>주소</span>
+                      <strong>{deliveryAddress}</strong>
+                    </div>
+                    <div className="kds-detail-row">
+                      <span>연락처</span>
+                      <strong>{store.phone ?? "-"}</strong>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
@@ -780,6 +839,57 @@ async function requestWithReauth<T>(
   }
 }
 
+function getOrderColumnWidth(height: number | undefined, laneHeight: number): OrderLayoutColumn["width"] {
+  if (!height || laneHeight <= 0) return "base";
+  if (height > laneHeight * 1.35) return "xwide";
+  if (height > laneHeight) return "wide";
+  return "base";
+}
+
+function buildOrderLayoutColumns(orders: Order[], orderCardHeights: Record<number, number>, laneHeight: number): OrderLayoutColumn[] {
+  const columns: OrderLayoutColumn[] = [];
+  const shortCardMaxHeight = laneHeight > 0 ? laneHeight * ORDER_CARD_SHORT_RATIO : 0;
+  let index = 0;
+
+  while (index < orders.length) {
+    const current = orders[index];
+    const currentHeight = orderCardHeights[current.id];
+
+    if (!currentHeight || laneHeight <= 0 || currentHeight > shortCardMaxHeight) {
+      columns.push({ orders: [current], width: getOrderColumnWidth(currentHeight, laneHeight) });
+      index += 1;
+      continue;
+    }
+
+    const column: Order[] = [current];
+    let accumulatedHeight = currentHeight;
+    let nextIndex = index + 1;
+
+    while (nextIndex < orders.length) {
+      const next = orders[nextIndex];
+      const nextHeight = orderCardHeights[next.id];
+
+      if (!nextHeight || nextHeight > shortCardMaxHeight) {
+        break;
+      }
+
+      const nextAccumulatedHeight = accumulatedHeight + ORDER_CARD_STACK_GAP_PX + nextHeight;
+      if (nextAccumulatedHeight > laneHeight) {
+        break;
+      }
+
+      column.push(next);
+      accumulatedHeight = nextAccumulatedHeight;
+      nextIndex += 1;
+    }
+
+    columns.push({ orders: column, width: "base" });
+    index = nextIndex;
+  }
+
+  return columns;
+}
+
 // ─────────��───────────────────────────────────
 // Order Card
 // ─────────────────────────────────────────────
@@ -787,6 +897,7 @@ function OrderCard({
   completedItemIds,
   now,
   onContextMenu,
+  onHeightChange,
   onToggleItemDone,
   onUpdateStatus,
   order,
@@ -795,15 +906,19 @@ function OrderCard({
   completedItemIds: Set<number>;
   now: number;
   onContextMenu: (orderId: number, x: number, y: number) => void;
+  onHeightChange?: (height: number) => void;
   onToggleItemDone: (itemId: number) => void;
   onUpdateStatus: (orderId: number, status: OrderStatus) => Promise<void>;
   order: Order;
   updating: boolean;
 }) {
   const longPressTimerRef = useRef<number | null>(null);
+  const cardRef = useRef<HTMLElement>(null);
 
-  const elapsed = formatElapsed(now, order.ordered_at ?? order.created_at);
-  const elapsedMinutes = getElapsedMinutes(now, order.ordered_at ?? order.created_at);
+  const orderTimestamp = order.ordered_at ?? order.created_at;
+  const orderedTime = formatOrderCardTime(orderTimestamp);
+  const elapsedLabel = order.status === "DONE" ? null : formatElapsedLabel(now, orderTimestamp);
+  const elapsedMinutes = getElapsedMinutes(now, orderTimestamp);
   const allergyRiskItemIds = getAllergyRiskItemIds(order.aiAnalysis);
   const isUrgent = elapsedMinutes >= 15;
   const isWarning = elapsedMinutes >= 8 && elapsedMinutes < 15;
@@ -828,12 +943,20 @@ function OrderCard({
     onContextMenu(order.id, e.clientX, e.clientY);
   }
 
-  const statusClass = order.status.toLowerCase();
-  const urgencyClass = isUrgent ? " urgent" : isWarning ? " warning" : "";
+  useEffect(() => {
+    const cardEl = cardRef.current;
+    if (!cardEl || !onHeightChange) return;
+    const updateHeight = () => onHeightChange(Math.ceil(cardEl.getBoundingClientRect().height));
+    updateHeight();
+    const observer = new ResizeObserver(() => updateHeight());
+    observer.observe(cardEl);
+    return () => observer.disconnect();
+  }, [onHeightChange, order.id]);
 
   return (
     <article
-      className={`kds-card ${statusClass}${urgencyClass}`}
+      className={`kds-card${order.status === "DONE" ? " done" : ""}`}
+      ref={cardRef}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
@@ -845,7 +968,7 @@ function OrderCard({
           <span className="kds-order-num">#{order.order_number ?? order.id}</span>
           <span className={`kds-elapsed-badge${isUrgent ? " urgent" : isWarning ? " warning" : ""}`}>
             <AlarmClock size={11} aria-hidden="true" />
-            {elapsed}
+            {elapsedLabel ? `${orderedTime} · ${elapsedLabel}` : orderedTime}
           </span>
         </div>
         <span className={`kds-order-type-badge kds-order-type-badge--${order.platform?.toLowerCase().includes("delivery") || order.platform?.toLowerCase().includes("배달") ? "delivery" : order.platform?.toLowerCase().includes("takeout") || order.platform?.toLowerCase().includes("포장") ? "takeout" : "dine"}`}>
@@ -905,7 +1028,7 @@ function OrderCard({
       {/* Action button */}
       {order.status === "NEW" ? (
         <button
-          className="kds-action-btn"
+          className="kds-action-btn start"
           disabled={updating}
           onClick={() => void onUpdateStatus(order.id, "COOKING")}
           type="button"
@@ -923,6 +1046,16 @@ function OrderCard({
         </button>
       ) : null}
     </article>
+  );
+}
+
+function StoreStatusDot({ status }: { status: StoreStatus }) {
+  const tone = status.toLowerCase();
+  return (
+    <span className={`kds-store-status-dot kds-store-status-dot--${tone}`} aria-hidden="true">
+      <span className="kds-store-status-dot-core" />
+      {status === "OPEN" ? <span className="kds-store-status-dot-pulse" /> : null}
+    </span>
   );
 }
 
@@ -1071,10 +1204,7 @@ function StaffPanel() {
           <p className="kds-panel-subtitle">총 {staffList.length}명 · 활성 {activeCount}명</p>
         </div>
         <button className="kds-btn-primary kds-btn-sm" onClick={openAdd} type="button">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          </svg>
+          <Plus size={12} aria-hidden="true" />
           직원 추가
         </button>
       </div>
@@ -1117,10 +1247,7 @@ function StaffPanel() {
                     <div className="kds-pin-reveal">
                       <span className="kds-pin-value">{member.pin}</span>
                       <button className="kds-icon-btn-xs" onClick={() => setPinVisible(null)} type="button" aria-label="PIN 숨기기">
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                          <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                        </svg>
+                        <X size={10} aria-hidden="true" />
                       </button>
                     </div>
                   ) : (
@@ -1153,10 +1280,7 @@ function StaffPanel() {
             <div className="kds-modal-head">
               <h2 className="kds-modal-title">{modal.type === "add" ? "직원 추가" : "직원 정보 수정"}</h2>
               <button className="kds-modal-close" onClick={() => setModal(null)} type="button" aria-label="닫기">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                  <line x1="1.5" y1="1.5" x2="11.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <line x1="11.5" y1="1.5" x2="1.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+                <X size={13} aria-hidden="true" />
               </button>
             </div>
             <div className="kds-modal-body">
@@ -1409,10 +1533,7 @@ function MyTasksPanel({
           </p>
         </div>
         <button className="kds-btn-primary kds-btn-sm" onClick={openAdd} type="button">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
+          <Plus size={11} aria-hidden="true" />
           메뉴 추가
         </button>
       </div>
@@ -1452,11 +1573,7 @@ function MyTasksPanel({
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setOpenPopoverId(isPopoverOpen ? null : menu.id); }}
                   >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                      <circle cx="7" cy="3" r="1.1" fill="currentColor" />
-                      <circle cx="7" cy="7" r="1.1" fill="currentColor" />
-                      <circle cx="7" cy="11" r="1.1" fill="currentColor" />
-                    </svg>
+                    <MoreVertical size={14} aria-hidden="true" />
                   </button>
                   {isPopoverOpen && (
                     <div className="kds-tile-popover" role="menu" onClick={(e) => e.stopPropagation()}>
@@ -1466,9 +1583,7 @@ function MyTasksPanel({
                         type="button"
                         onClick={() => openEdit(menu)}
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                          <path d="M2 9l6-6 2 2-6 6H2V9z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-                        </svg>
+                        <Pencil size={12} aria-hidden="true" />
                         수정
                       </button>
                       <button
@@ -1477,11 +1592,7 @@ function MyTasksPanel({
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setDeleteTarget(menu); setOpenPopoverId(null); }}
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                          <path d="M3 5v5M6 5v5M9 5v5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                          <path d="M1.5 3h9M4 3V2h4v1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M2.5 3l.5 7h6l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <Trash2 size={12} aria-hidden="true" />
                         삭제
                       </button>
                     </div>
@@ -1498,16 +1609,6 @@ function MyTasksPanel({
         <span className="kds-section-label">
           {selectedMenuName ? `주문 내역 — ${selectedMenuName}` : "주문 내역"}
         </span>
-        {selectedMenuName && (
-          <button
-            className="kds-filter-clear-btn"
-            type="button"
-            onClick={() => setSelectedMenuId(null)}
-            aria-label="필터 해제"
-          >
-            필터 해제
-          </button>
-        )}
       </div>
 
       {historyRows.length === 0 ? (
@@ -1563,10 +1664,7 @@ function MyTasksPanel({
             <div className="kds-modal-head">
               <h2 className="kds-modal-title">{menuModal.type === "add" ? "담당 메뉴 추가" : "담당 메뉴 수정"}</h2>
               <button className="kds-modal-close" onClick={() => setMenuModal(null)} type="button" aria-label="닫기">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                  <line x1="1.5" y1="1.5" x2="11.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <line x1="11.5" y1="1.5" x2="1.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+                <X size={13} aria-hidden="true" />
               </button>
             </div>
             <div className="kds-modal-body">
@@ -1897,14 +1995,14 @@ function getElapsedMinutes(now: number, timestamp: string) {
   return Math.floor((now - start) / 60000);
 }
 
-function formatElapsed(now: number, timestamp: string) {
+function formatElapsedLabel(now: number, timestamp: string) {
   const start = parseApiTimestamp(timestamp).getTime();
   if (Number.isNaN(start)) return "-";
   const seconds = Math.max(0, Math.floor((now - start) / 1000));
-  if (seconds < 60) return `${seconds}초`;
+  if (seconds < 60) return `${seconds}초 경과`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}분`;
-  return `${Math.floor(minutes / 60)}시간`;
+  if (minutes < 60) return `${minutes}분 경과`;
+  return "1시간 +";
 }
 
 function parseApiTimestamp(timestamp: string) {
@@ -1931,4 +2029,14 @@ function formatDetailTime(timestamp: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatOrderCardTime(timestamp: string) {
+  const date = parseApiTimestamp(timestamp);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
 }
